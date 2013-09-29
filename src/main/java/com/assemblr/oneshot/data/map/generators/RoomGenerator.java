@@ -205,7 +205,7 @@ public final class RoomGenerator implements MapGenerator {
     }
     
     private Room generateRoom() {
-        return new Room(0, 0, generator.nextInt(10) + 5, generator.nextInt(10) + 5);
+        return new Room(0, 0, generator.nextInt(30) + 9, generator.nextInt(30) + 9);
     }
     
     private Set<Point> generateDoors(Room room, Direction existingDirection) {

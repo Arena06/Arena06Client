@@ -1,7 +1,7 @@
 package com.assemblr.oneshot.data.sprites;
 
 import com.assemblr.oneshot.data.Sprite;
-import com.assemblr.oneshot.data.map.Map;
+import com.assemblr.oneshot.data.map.generators.MapGenerator;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
@@ -13,7 +13,7 @@ public class Player extends Sprite {
     public Player(String name) {
         this.name = name;
         
-        width = height = Map.TILE_SIZE;
+        width = height = MapGenerator.TILE_SIZE;
     }
     
     public Color getColor() {

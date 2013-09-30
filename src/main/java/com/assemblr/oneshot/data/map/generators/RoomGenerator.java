@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import org.javatuples.Pair;
 
 
 public final class RoomGenerator implements MapGenerator {
@@ -32,6 +33,9 @@ public final class RoomGenerator implements MapGenerator {
                 case DOOR:
                     System.out.print(",");
                     break;
+                case DEBUG:
+                    System.out.print("*");
+                    break;
                 }
             }
             System.out.println();
@@ -43,17 +47,19 @@ public final class RoomGenerator implements MapGenerator {
         private int y;
         private int width;
         private int height;
+        private Door entrance;
         private Set<Door> doors = new HashSet<Door>();
         
-        public Room(int x, int y, int width, int height) {
-            this(x, y, width, height, null);
+        public Room(int x, int y, int width, int height, Door entrance) {
+            this(x, y, width, height, entrance, null);
         }
         
-        public Room(int x, int y, int width, int height, Set<Point> doors) {
+        public Room(int x, int y, int width, int height, Door entrance, Set<Point> doors) {
             this.x = x;
             this.y = y;
             this.width = width;
             this.height = height;
+            this.entrance = entrance;
             if (doors != null) {
                 addDoors(doors);
             }
@@ -99,7 +105,7 @@ public final class RoomGenerator implements MapGenerator {
             }
             
             Point worldLocation = new Point(x + door.x, y + door.y);
-            doors.add(new Door(worldLocation, direction));
+            doors.add(new Door(this, worldLocation, direction));
         }
         
         public int getX() {
@@ -117,15 +123,37 @@ public final class RoomGenerator implements MapGenerator {
         public void setY(int y) {
             this.y = y;
         }
+        
+        public Door getEntrance() {
+            return entrance;
+        }
+        
+        public void setEntrance(Door entrance) {
+            this.entrance = entrance;
+        }
     }
     
     private static final class Door {
+        private final Room room;
         private final Point location;
         private final Direction direction;
         
-        public Door(Point location, Direction direction) {
+        public Door(Room room, Point location, Direction direction) {
+            this.room = room;
             this.location = location;
             this.direction = direction;
+        }
+        
+        public Room getRoom() {
+            return room;
+        }
+        
+        public Point getRoomLocation() {
+            return new Point(location.x - room.getX(), location.y - room.getY());
+        }
+        
+        public Point getRoomLocation(Room room) {
+            return new Point(location.x - room.getX(), location.y - room.getY());
         }
         
         public Point getLocation() {
@@ -166,7 +194,7 @@ public final class RoomGenerator implements MapGenerator {
         roomList = new LinkedList<Room>();
         openDoors = new LinkedList<Door>();
         
-        Room mainRoom = generateRoom();
+        Room mainRoom = generateRoom(null);
         mainRoom.addDoors(generateDoors(mainRoom, null));
         openDoors.addAll(mainRoom.getDoors());
         roomList.add(mainRoom);
@@ -174,7 +202,7 @@ public final class RoomGenerator implements MapGenerator {
         while (!openDoors.isEmpty()) {
             generationProbability *= 0.5;
             Door door = openDoors.poll();
-            Room room = generateRoom();
+            Room room = generateRoom(door);
             
             // place room on map
             switch (door.getDirection()) {
@@ -204,14 +232,15 @@ public final class RoomGenerator implements MapGenerator {
         return generateMap(roomList);
     }
     
-    private Room generateRoom() {
-        return new Room(0, 0, generator.nextInt(11) + 9, generator.nextInt(11) + 9);
+    private Room generateRoom(Door entrance) {
+        return new Room(0, 0, generator.nextInt(11) + 9, generator.nextInt(11) + 9, entrance);
     }
     
     private Set<Point> generateDoors(Room room, Direction existingDirection) {
         Set<Point> doors = new HashSet<Point>();
         
         for (Direction direction : Direction.values()) {
+            if (direction == existingDirection) continue;
             if (generator.nextDouble() <= generationProbability) {
                 doors.add(generateDoor(room, direction));
             }
@@ -264,39 +293,101 @@ public final class RoomGenerator implements MapGenerator {
         
         // assemble map
         for (Room room : rooms) {
-            // normalize coordinates
+            // get normalized coordinates
             int xNorm = room.getX() - xMin;
             int yNorm = room.getY() - yMin;
             
+            TileType[][] roomData = new TileType[room.getWidth()][room.getHeight()];
+            
             // apply room walls
             for (int x = 0; x < room.getWidth(); x++) {
-                setEmptyTile(data, xNorm + x, yNorm, TileType.WALL);
-                setEmptyTile(data, xNorm + x, yNorm + room.getHeight() - 1, TileType.WALL);
+                roomData[x][0] = TileType.WALL;
+                roomData[x][room.getHeight() - 1] = TileType.WALL;
             }
             for (int y = 0; y < room.getHeight(); y++) {
-                setEmptyTile(data, xNorm, yNorm + y, TileType.WALL);
-                setEmptyTile(data, xNorm + room.getWidth() - 1, yNorm + y, TileType.WALL);
+                roomData[0][y] = TileType.WALL;
+                roomData[room.getWidth() - 1][y] = TileType.WALL;
             }
             
             // apply room floor
             for (int x = 1; x < room.getWidth() - 1; x++) {
                 for (int y = 1; y < room.getHeight() - 1; y++) {
-                    setEmptyTile(data, xNorm + x, yNorm + y, TileType.FLOOR);
+                    roomData[x][y] = TileType.FLOOR;
                 }
             }
             
             // apply room doors
             for (Door door : room.getDoors()) {
-                data[door.getLocation().x - xMin][door.getLocation().y - yMin] = TileType.DOOR;
+                roomData[door.getRoomLocation().x][door.getRoomLocation().y] = TileType.DOOR;
                 switch (door.getDirection()) {
                 case NORTH:
                 case SOUTH:
-                    data[door.getLocation().x - xMin + 1][door.getLocation().y - yMin] = TileType.DOOR;
+                    roomData[door.getRoomLocation().x + 1][door.getRoomLocation().y] = TileType.DOOR;
                     break;
                 case EAST:
                 case WEST:
-                    data[door.getLocation().x - xMin][door.getLocation().y - yMin + 1] = TileType.DOOR;
+                    roomData[door.getRoomLocation().x][door.getRoomLocation().y + 1] = TileType.DOOR;
                     break;
+                }
+            }
+            
+            // validate room tiles
+            Set<Pair<Point, TileType>> validPoints = new HashSet<Pair<Point, TileType>>();
+            Set<Point> closedPoints = new HashSet<Point>();
+            Queue<Point> openPoints = new LinkedList<Point>();
+            Queue<Point> wallPoints = new LinkedList<Point>();
+            if (room.getEntrance() != null) {
+                openPoints.add(Direction.translate(room.getEntrance().getRoomLocation(room), room.getEntrance().getDirection()));
+            }
+            for (Door door : room.getDoors()) {
+                openPoints.add(Direction.translate(door.getRoomLocation(), door.getDirection().getOpposite()));
+            }
+            while (!openPoints.isEmpty()) {
+                Point openPoint = openPoints.poll();
+                if (closedPoints.contains(openPoint)) continue;
+                closedPoints.add(openPoint);
+                for (Direction direction : Direction.values()) {
+                    Point local = Direction.translate(openPoint, direction);
+                    if (local.x < 0 || local.x >= room.getWidth() || local.y < 0 || local.y >= room.getHeight())
+                        continue;
+                    Point global = new Point(local.x + xNorm, local.y + yNorm);
+                    
+                    if (roomData[local.x][local.y] == TileType.WALL || roomData[local.x][local.y] == TileType.DOOR) {
+                        validPoints.add(new Pair<Point, TileType>(global, roomData[local.x][local.y]));
+                        wallPoints.add(local);
+                        continue;
+                    }
+                    
+                    if (data[global.x][global.y] == TileType.WALL || data[global.x][global.y] == TileType.DOOR) {
+                        continue;
+                    }
+                    
+                    validPoints.add(new Pair<Point, TileType>(global, roomData[local.x][local.y]));
+                    openPoints.add(local);
+                }
+            }
+            while (!wallPoints.isEmpty()) {
+                Point wallPoint = wallPoints.poll();
+                if (closedPoints.contains(wallPoint)) continue;
+                closedPoints.add(wallPoint);
+                for (Direction direction : Direction.values()) {
+                    Point local = Direction.translate(wallPoint, direction);
+                    if (local.x < 0 || local.x >= room.getWidth() || local.y < 0 || local.y >= room.getHeight())
+                        continue;
+                    Point global = new Point(local.x + xNorm, local.y + yNorm);
+                    
+                    if (roomData[local.x][local.y] == TileType.WALL || roomData[local.x][local.y] == TileType.DOOR) {
+                        validPoints.add(new Pair<Point, TileType>(global, roomData[local.x][local.y]));
+                    }
+                }
+            }
+            
+            // commit data to grid
+            for (Pair<Point, TileType> tile : validPoints) {
+                if (tile.getValue1() == TileType.DOOR) {
+                    data[tile.getValue0().x][tile.getValue0().y] = TileType.DOOR;
+                } else {
+                    setEmptyTile(data, tile.getValue0().x, tile.getValue0().y, tile.getValue1());
                 }
             }
         }

@@ -5,5 +5,6 @@ public enum TileType {
     NONE,
     WALL,
     FLOOR,
-    DOOR;
+    DOOR,
+    DEBUG;
 }

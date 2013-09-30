@@ -12,6 +12,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;
@@ -20,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -30,6 +32,8 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
     private static final double MAXIMUM_VELOCITY = 400;
+    
+    private Random random = new Random();
     
     private Thread runner;
     private boolean running = false;
@@ -46,7 +50,6 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     
     public GamePanel() {
         setPreferredSize(new Dimension(800, 600));
-        player.setPosition(new Point2D.Double(200, 200));
         sprites.put(0, player);
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
@@ -55,6 +58,10 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     public void start() {
         map = mapGenerator.generateMap();
         paintMap();
+        
+        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
+            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
+        }
         
         running = true;
         runner = new Thread(new Runnable() {
@@ -137,8 +144,47 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
         }
         velocity.clamp(MAXIMUM_VELOCITY);
         
-        player.setX(player.getX() + velocity.x * delta);
-        player.setY(player.getY() + velocity.y * delta);
+        if (Math.abs(velocity.x) < 0.001) velocity.x = 0;
+        if (Math.abs(velocity.y) < 0.001) velocity.y = 0;
+        
+        // perform collision detection
+        double xNew = player.getX() + velocity.x * delta;
+        double yNew = player.getY() + velocity.y * delta;
+        
+        if (velocity.x < 0) {
+            int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
+            for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                if (map[xTile][yTile].isSolid()) {
+                    xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
+                }
+            }
+        } else if (velocity.x > 0) {
+            int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
+            for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                if (map[xTile][yTile].isSolid()) {
+                    xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
+                }
+            }
+        }
+        
+        if (velocity.y < 0) {
+            int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
+            for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                if (map[xTile][yTile].isSolid()) {
+                    yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
+                }
+            }
+        } else if (velocity.y > 0) {
+            int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
+            for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                if (map[xTile][yTile].isSolid()) {
+                    yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
+                }
+            }
+        }
+        
+        player.setX(xNew);
+        player.setY(yNew);
     }
     
     @Override

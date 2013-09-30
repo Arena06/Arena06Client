@@ -2,9 +2,19 @@ package com.assemblr.oneshot.data.map;
 
 
 public enum TileType {
-    NONE,
-    WALL,
-    FLOOR,
-    DOOR,
-    DEBUG;
+    NONE  (true),
+    WALL  (true),
+    FLOOR (false),
+    DOOR  (false),
+    DEBUG (false);
+    
+    private final boolean solid;
+    
+    private TileType(boolean solid) {
+        this.solid = solid;
+    }
+    
+    public boolean isSolid() {
+        return solid;
+    }
 }

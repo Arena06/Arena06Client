@@ -1,5 +1,6 @@
 package com.assemblr.oneshot.data;
 
+import com.assemblr.oneshot.data.map.generators.MapGenerator;
 import com.assemblr.oneshot.utils.Dimension2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -26,6 +27,22 @@ public abstract class Sprite implements Renderable {
     
     public void setY(double y) {
         this.y = y;
+    }
+    
+    public int getTileX() {
+        return (int) (x / MapGenerator.TILE_SIZE);
+    }
+    
+    public void setTileX(int x) {
+        this.x = x * MapGenerator.TILE_SIZE;
+    }
+    
+    public int getTileY() {
+        return (int) (y / MapGenerator.TILE_SIZE);
+    }
+    
+    public void setTileY(int y) {
+        this.y = y * MapGenerator.TILE_SIZE;
     }
     
     public double getWidth() {

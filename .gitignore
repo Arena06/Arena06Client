@@ -3,6 +3,7 @@
 
 # Maven stuff
 /target
+/dependency-reduced-pom.xml
 
 # NetBeans project files
 /nbactions.xml

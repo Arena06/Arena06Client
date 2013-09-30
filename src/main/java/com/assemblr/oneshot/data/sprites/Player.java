@@ -13,7 +13,7 @@ public class Player extends Sprite {
     public Player(String name) {
         this.name = name;
         
-        width = height = MapGenerator.TILE_SIZE;
+        width = height = MapGenerator.TILE_SIZE - 10;
     }
     
     public Color getColor() {

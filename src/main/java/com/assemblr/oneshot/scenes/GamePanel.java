@@ -16,18 +16,20 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 
 public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
-    private static final double MAXIMUM_VELOCITY = 300;
+    private static final double MAXIMUM_VELOCITY = 400;
     
     private Thread runner;
     private boolean running = false;
@@ -59,12 +61,25 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
             public void run() {
                 long lastUpdate = System.currentTimeMillis();
                 while (running) {
-                    repaint();
-                    
                     try {
-                        Thread.sleep(50);
+                        SwingUtilities.invokeAndWait(new Runnable() {
+                            public void run() {
+                                paintImmediately(0, 0, getWidth(), getHeight());
+                            }
+                        });
                     } catch (InterruptedException ex) {
                         ex.printStackTrace();
+                    } catch (InvocationTargetException ex) {
+                        ex.printStackTrace();
+                    }
+                    
+                    long elapsed = System.currentTimeMillis() - lastUpdate;
+                    if (elapsed < 16) { // 60 FPS
+                        try {
+                            Thread.sleep(16 - elapsed);
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
                     }
                     
                     long now = System.currentTimeMillis();
@@ -81,7 +96,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     }
     
     private void paintMap() {
-        mapBuffer = new BufferedImage(map.length * (int) MapGenerator.TILE_SIZE, (map.length == 0 ? 0 : map[0].length) * (int) MapGenerator.TILE_SIZE, BufferedImage.TYPE_4BYTE_ABGR);
+        mapBuffer = getGraphicsConfiguration().createCompatibleImage(map.length * (int) MapGenerator.TILE_SIZE, (map.length == 0 ? 0 : map[0].length) * (int) MapGenerator.TILE_SIZE);
         Graphics2D g = mapBuffer.createGraphics();
         for (int x = 0; x < map.length; x++) {
             for (int y = 0; y < map[x].length; y++) {
@@ -98,6 +113,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 g.fillRect(x * (int) MapGenerator.TILE_SIZE, y * (int) MapGenerator.TILE_SIZE, (int) MapGenerator.TILE_SIZE, (int) MapGenerator.TILE_SIZE);
             }
         }
+        g.dispose();
     }
     
     private void update(double delta) {

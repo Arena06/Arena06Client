@@ -205,7 +205,7 @@ public final class RoomGenerator implements MapGenerator {
     }
     
     private Room generateRoom() {
-        return new Room(0, 0, generator.nextInt(30) + 9, generator.nextInt(30) + 9);
+        return new Room(0, 0, generator.nextInt(11) + 9, generator.nextInt(11) + 9);
     }
     
     private Set<Point> generateDoors(Room room, Direction existingDirection) {
@@ -223,13 +223,13 @@ public final class RoomGenerator implements MapGenerator {
     private Point generateDoor(Room room, Direction direction) {
         switch (direction) {
         case NORTH:
-            return new Point(generator.nextInt(room.getWidth() - 2) + 1, 0);
+            return new Point(generator.nextInt(room.getWidth() - 3) + 1, 0);
         case SOUTH:
-            return new Point(generator.nextInt(room.getWidth() - 2) + 1, room.getHeight() - 1);
+            return new Point(generator.nextInt(room.getWidth() - 3) + 1, room.getHeight() - 1);
         case EAST:
-            return new Point(0, generator.nextInt(room.getHeight() - 2) + 1);
+            return new Point(0, generator.nextInt(room.getHeight() - 3) + 1);
         case WEST:
-            return new Point(room.getWidth() - 1, generator.nextInt(room.getHeight() - 2) + 1);
+            return new Point(room.getWidth() - 1, generator.nextInt(room.getHeight() - 3) + 1);
         default:
             return null;
         }
@@ -288,6 +288,16 @@ public final class RoomGenerator implements MapGenerator {
             // apply room doors
             for (Door door : room.getDoors()) {
                 data[door.getLocation().x - xMin][door.getLocation().y - yMin] = TileType.DOOR;
+                switch (door.getDirection()) {
+                case NORTH:
+                case SOUTH:
+                    data[door.getLocation().x - xMin + 1][door.getLocation().y - yMin] = TileType.DOOR;
+                    break;
+                case EAST:
+                case WEST:
+                    data[door.getLocation().x - xMin][door.getLocation().y - yMin + 1] = TileType.DOOR;
+                    break;
+                }
             }
         }
         

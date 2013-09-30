@@ -3,6 +3,9 @@ package com.assemblr.oneshot.data.map.generators;
 import com.assemblr.oneshot.data.map.TileType;
 import com.assemblr.oneshot.utils.Direction;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,28 +21,34 @@ public final class RoomGenerator implements MapGenerator {
     public static void main(String[] args) {
         RoomGenerator generator = new RoomGenerator();
         TileType[][] map = generator.generateMap();
+        
+        StringBuilder trace = new StringBuilder();
         for (TileType[] row : map) {
             for (TileType tile : row) {
                 switch (tile) {
                 case NONE:
-                    System.out.print(" ");
+                    trace.append(" ");
                     break;
                 case FLOOR:
-                    System.out.print(".");
+                    trace.append(".");
                     break;
                 case WALL:
-                    System.out.print("X");
+                    trace.append("X");
                     break;
                 case DOOR:
-                    System.out.print(",");
+                    trace.append(",");
                     break;
                 case DEBUG:
-                    System.out.print("*");
+                    trace.append("*");
                     break;
                 }
             }
-            System.out.println();
+            trace.append("\n");
         }
+        String output = trace.toString();
+        System.out.print(output);
+        Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clip.setContents(new StringSelection(output), null);
     }
     
     private static final class Room {

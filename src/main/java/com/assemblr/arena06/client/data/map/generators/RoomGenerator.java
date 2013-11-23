@@ -1,7 +1,7 @@
-package com.assemblr.oneshot.data.map.generators;
+package com.assemblr.arena06.client.data.map.generators;
 
-import com.assemblr.oneshot.data.map.TileType;
-import com.assemblr.oneshot.utils.Direction;
+import com.assemblr.arena06.client.data.map.TileType;
+import com.assemblr.arena06.client.utils.Direction;
 import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;

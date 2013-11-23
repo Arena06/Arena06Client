@@ -1,4 +1,4 @@
-package com.assemblr.oneshot.data;
+package com.assemblr.arena06.client.data;
 
 import java.awt.Graphics2D;
 

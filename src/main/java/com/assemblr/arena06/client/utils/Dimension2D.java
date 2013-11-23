@@ -1,4 +1,4 @@
-package com.assemblr.oneshot.utils;
+package com.assemblr.arena06.client.utils;
 
 
 public abstract class Dimension2D extends java.awt.geom.Dimension2D {

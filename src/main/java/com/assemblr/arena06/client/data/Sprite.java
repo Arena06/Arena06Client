@@ -1,7 +1,7 @@
-package com.assemblr.oneshot.data;
+package com.assemblr.arena06.client.data;
 
-import com.assemblr.oneshot.data.map.generators.MapGenerator;
-import com.assemblr.oneshot.utils.Dimension2D;
+import com.assemblr.arena06.client.data.map.generators.MapGenerator;
+import com.assemblr.arena06.client.utils.Dimension2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 

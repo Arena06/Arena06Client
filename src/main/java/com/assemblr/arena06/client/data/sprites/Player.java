@@ -1,7 +1,7 @@
-package com.assemblr.oneshot.data.sprites;
+package com.assemblr.arena06.client.data.sprites;
 
-import com.assemblr.oneshot.data.Sprite;
-import com.assemblr.oneshot.data.map.generators.MapGenerator;
+import com.assemblr.arena06.client.data.Sprite;
+import com.assemblr.arena06.client.data.map.generators.MapGenerator;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;

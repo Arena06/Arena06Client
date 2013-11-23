@@ -1,6 +1,6 @@
-package com.assemblr.oneshot;
+package com.assemblr.arena06.client;
 
-import com.assemblr.oneshot.scenes.GamePanel;
+import com.assemblr.arena06.client.scenes.GamePanel;
 import javax.swing.JFrame;
 
 

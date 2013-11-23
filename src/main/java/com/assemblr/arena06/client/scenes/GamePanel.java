@@ -1,18 +1,17 @@
-package com.assemblr.oneshot.scenes;
+package com.assemblr.arena06.client.scenes;
 
-import com.assemblr.oneshot.data.Sprite;
-import com.assemblr.oneshot.data.map.TileType;
-import com.assemblr.oneshot.data.map.generators.MapGenerator;
-import com.assemblr.oneshot.data.map.generators.RoomGenerator;
-import com.assemblr.oneshot.data.sprites.Player;
-import com.assemblr.oneshot.utils.Vector2D;
+import com.assemblr.arena06.client.data.Sprite;
+import com.assemblr.arena06.client.data.map.TileType;
+import com.assemblr.arena06.client.data.map.generators.MapGenerator;
+import com.assemblr.arena06.client.data.map.generators.RoomGenerator;
+import com.assemblr.arena06.client.data.sprites.Player;
+import com.assemblr.arena06.client.utils.Vector2D;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
-import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;

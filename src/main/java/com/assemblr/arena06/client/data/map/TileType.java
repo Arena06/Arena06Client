@@ -1,4 +1,4 @@
-package com.assemblr.oneshot.data.map;
+package com.assemblr.arena06.client.data.map;
 
 
 public enum TileType {

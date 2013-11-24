@@ -85,6 +85,17 @@ public class PacketClient {
         channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port)));
     }
     
+    public void sendDataBlocking(Map<String, Object> data) {
+        while (channel == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port))).awaitUninterruptibly();
+    }
+    
     public Queue<Map<String, Object>> getIncomingPackets() {
         return incomingPackets;
     }

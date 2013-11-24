@@ -110,6 +110,15 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
             "data", player.serializeState()
         ));
         System.out.println("handshaking with server...");
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+            @Override
+            public void run() {
+                client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                    "type", "logout"
+                ));
+            }
+        });
     }
     
     public void stop() {
@@ -123,6 +132,13 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
         while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
             player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
         }
+        
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "sprite",
+            "action", "update",
+            "id", playerId,
+            "data", player.serializeState()
+        ));
     }
     
     private void paintMap() {
@@ -190,6 +206,9 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
+                } else if (packet.get("action").equals("remove")) {
+                    int spriteId = (Integer) packet.get("id");
+                    sprites.remove(spriteId);
                 } else if (packet.get("action").equals("update")) {
                     int spriteId = (Integer) packet.get("id");
                     if (spriteId != playerId) {

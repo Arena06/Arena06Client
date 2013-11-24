@@ -8,7 +8,7 @@ public class ShotMain extends JFrame {
     
     public static void main(String[] args) {
         ShotMain main = new ShotMain();
-        GamePanel game = new GamePanel();
+        GamePanel game = new GamePanel(args.length >= 1 ? args[0] : "Player");
         
         main.setTitle("Arena Game");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

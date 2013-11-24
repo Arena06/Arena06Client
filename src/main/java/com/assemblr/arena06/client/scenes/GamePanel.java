@@ -1,11 +1,13 @@
 package com.assemblr.arena06.client.scenes;
 
-import com.assemblr.arena06.client.data.Sprite;
-import com.assemblr.arena06.client.data.map.TileType;
-import com.assemblr.arena06.client.data.map.generators.MapGenerator;
-import com.assemblr.arena06.client.data.map.generators.RoomGenerator;
-import com.assemblr.arena06.client.data.sprites.Player;
-import com.assemblr.arena06.client.utils.Vector2D;
+import com.assemblr.arena06.common.data.Sprite;
+import com.assemblr.arena06.common.data.map.TileType;
+import com.assemblr.arena06.common.data.map.generators.MapGenerator;
+import com.assemblr.arena06.common.data.map.generators.RoomGenerator;
+import com.assemblr.arena06.common.data.Player;
+import com.assemblr.arena06.client.net.PacketClient;
+import com.assemblr.arena06.common.utils.Vector2D;
+import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -19,6 +21,7 @@ import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -32,12 +35,15 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     private static final double FRICTION_ACCELERATION = 2000;
     private static final double MAXIMUM_VELOCITY = 400;
     
-    private Random random = new Random();
+    private final Random random = new Random();
+    
+    private final PacketClient client = new PacketClient(30155);
     
     private Thread runner;
     private boolean running = false;
     
-    private Player player = new Player("assemblr");
+    private int playerId = 0;
+    private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
     private MapGenerator mapGenerator = new RoomGenerator();
     private TileType[][] map;
@@ -47,20 +53,23 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     
     private Set<Integer> keysDown = new HashSet<Integer>();
     
-    public GamePanel() {
+    public GamePanel(String username) {
+        player = new Player(username);
         setPreferredSize(new Dimension(800, 600));
-        sprites.put(0, player);
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
     }
     
     public void start() {
-        map = mapGenerator.generateMap();
-        paintMap();
-        
-        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
-            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
-        }
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    client.run();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }).start();
         
         running = true;
         runner = new Thread(new Runnable() {
@@ -95,10 +104,25 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
             }
         });
         runner.start();
+        
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "login",
+            "data", player.serializeState()
+        ));
+        System.out.println("handshaking with server...");
     }
     
     public void stop() {
         running = false;
+    }
+    
+    private void generateMap(long seed) {
+        map = mapGenerator.generateMap(seed);
+        paintMap();
+        
+        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
+            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
+        }
     }
     
     private void paintMap() {
@@ -123,6 +147,58 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     }
     
     private void update(double delta) {
+        // process inbound packets
+        Map<String, Object> packet;
+        while ((packet = client.getIncomingPackets().poll()) != null) {
+            if (packet.get("type").equals("login")) {
+                player.updateState((Map<String, Object>) packet.get("data"));
+                playerId = (Integer) packet.get("id");
+                generateMap((Long) packet.get("map-seed"));
+                client.sendData(ImmutableMap.<String, Object>of(
+                    "type", "request",
+                    "request", "sprite-list"
+                ));
+                System.out.println("logged in as " + player.getName());
+            } else if (packet.get("type").equals("request")) {
+                if (packet.get("request").equals("sprite-list")) {
+                    // refresh sprite list
+                    sprites.clear();
+                    Map<String, Object> spriteList = (Map<String, Object>) packet.get("data");
+                    for (Map.Entry<String, Object> entry : spriteList.entrySet()) {
+                        int spriteId = Integer.parseInt(entry.getKey());
+                        if (spriteId == playerId) continue;
+                        List<Object> spriteData = (List<Object>) entry.getValue();
+                        try {
+                            Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
+                            Sprite sprite = spriteClass.newInstance();
+                            sprite.updateState((Map<String, Object>) spriteData.get(1));
+                            sprites.put(spriteId, sprite);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            } else if (packet.get("type").equals("sprite")) {
+                if (packet.get("action").equals("create")) {
+                    int spriteId = (Integer) packet.get("id");
+                    List<Object> spriteData = (List<Object>) packet.get("data");
+                    try {
+                        Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
+                        Sprite sprite = spriteClass.newInstance();
+                        sprite.updateState((Map<String, Object>) spriteData.get(1));
+                        sprites.put(spriteId, sprite);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (packet.get("action").equals("update")) {
+                    int spriteId = (Integer) packet.get("id");
+                    if (spriteId != playerId) {
+                        sprites.get(spriteId).updateState((Map<String, Object>) packet.get("data"));
+                    }
+                }
+            }
+        }
+        
         Vector2D acceleration = new Vector2D();
         
         int xInput = (keysDown.contains(KeyEvent.VK_A) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_D) ? 1 : 0);
@@ -182,8 +258,19 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
             }
         }
         
+        double xOld = player.getX();
+        double yOld = player.getY();
         player.setX(xNew);
         player.setY(yNew);
+        
+        if (playerId != 0 && xOld != xNew || yOld != yNew) {
+            client.sendData(ImmutableMap.<String, Object>of(
+                "type", "sprite",
+                "action", "update",
+                "id", playerId,
+                "data", player.serializeState()
+            ));
+        }
     }
     
     @Override
@@ -204,6 +291,11 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
             sprite.render(g);
             g.translate(-sprite.getX(), -sprite.getY());
         }
+        
+        // render player separately
+        g.translate(player.getX(), player.getY());
+        player.render(g);
+        g.translate(-player.getX(), -player.getY());
         
     }
     

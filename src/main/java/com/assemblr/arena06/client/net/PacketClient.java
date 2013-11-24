@@ -17,6 +17,8 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class PacketClient {
     
@@ -42,6 +44,8 @@ public class PacketClient {
     private final int port;
     private Channel channel;
     
+    private final Queue<Map<String, Object>> incomingPackets = new ConcurrentLinkedQueue<Map<String, Object>>();
+    
     public PacketClient(int port) {
         this.port = port;
     }
@@ -59,7 +63,7 @@ public class PacketClient {
                     ch.pipeline().addLast(
                             new PacketEncoder(), new DataEncoder(),
                             new PacketDecoder(), new DataDecoder(),
-                            new PacketClientHandler());
+                            new PacketClientHandler(incomingPackets));
                 }
             });
             
@@ -79,6 +83,10 @@ public class PacketClient {
             }
         }
         channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port)));
+    }
+    
+    public Queue<Map<String, Object>> getIncomingPackets() {
+        return incomingPackets;
     }
     
 }

@@ -19,6 +19,7 @@ import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     
     private final Random random = new Random();
     
-    private final PacketClient client = new PacketClient(30155);
+    private final PacketClient client;
     
     private Thread runner;
     private boolean running = false;
@@ -53,7 +54,8 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     
     private Set<Integer> keysDown = new HashSet<Integer>();
     
-    public GamePanel(String username) {
+    public GamePanel(String ipAddress, int port, String username) {
+        client = new PacketClient(new InetSocketAddress(ipAddress, port));
         player = new Player(username);
         setPreferredSize(new Dimension(800, 600));
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);

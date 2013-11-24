@@ -7,8 +7,29 @@ import javax.swing.JFrame;
 public class ShotMain extends JFrame {
     
     public static void main(String[] args) {
+        String ipAddress = "localhost";
+        int port = 30155;
+        String username = "Player";
+        
+        for (String arg : args) {
+            String[] flag = arg.split("=", 2);
+            if (flag.length != 2) continue;
+            if (flag[0].equalsIgnoreCase("ip")) {
+                ipAddress = flag[1];
+                if (ipAddress.contains(":")) {
+                    String[] split = ipAddress.split(":");
+                    ipAddress = split[0];
+                    port = Integer.parseInt(split[1]);
+                }
+            } else if (flag[0].equalsIgnoreCase("port")) {
+                port = Integer.parseInt(flag[1]);
+            } else if (flag[0].equals("username")) {
+                username = flag[1];
+            }
+        }
+        
         ShotMain main = new ShotMain();
-        GamePanel game = new GamePanel(args.length >= 1 ? args[0] : "Player");
+        GamePanel game = new GamePanel(ipAddress, port, username);
         
         main.setTitle("Arena Game");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class PacketClient {
     
     public static void main(String[] args) throws Exception {
-        final PacketClient client = new PacketClient(30155);
+        final PacketClient client = new PacketClient(new InetSocketAddress("localhost", 30155));
         Thread clientThread = new Thread(new Runnable() {
             public void run() {
                 try {
@@ -41,13 +41,13 @@ public class PacketClient {
                 )));
     }
     
-    private final int port;
+    private final InetSocketAddress address;
     private Channel channel;
     
     private final Queue<Map<String, Object>> incomingPackets = new ConcurrentLinkedQueue<Map<String, Object>>();
     
-    public PacketClient(int port) {
-        this.port = port;
+    public PacketClient(InetSocketAddress address) {
+        this.address = address;
     }
     
     public void run() throws Exception {
@@ -82,7 +82,7 @@ public class PacketClient {
                 ex.printStackTrace();
             }
         }
-        channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port)));
+        channel.writeAndFlush(new AddressedData(data, null, address));
     }
     
     public void sendDataBlocking(Map<String, Object> data) {
@@ -93,7 +93,7 @@ public class PacketClient {
                 ex.printStackTrace();
             }
         }
-        channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port))).awaitUninterruptibly();
+        channel.writeAndFlush(new AddressedData(data, null, address)).awaitUninterruptibly();
     }
     
     public Queue<Map<String, Object>> getIncomingPackets() {

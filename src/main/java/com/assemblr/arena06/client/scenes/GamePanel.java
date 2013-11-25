@@ -375,18 +375,27 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
         if (chatting) {
             g.setColor(new Color(0x88000000, true));
             g.fillRect(10, getHeight() - 45, getWidth() - 20, 35);
-            if (!chats.isEmpty())
-                g.fillRect(10, getHeight() - (chats.size() * 25 + 65), getWidth() - 20, chats.size() * 25 + 10);
-            
             g.setColor(Color.WHITE);
             g.drawString(currentChat.toString() + "_", 20, getHeight() - 20);
+            
             int i = 1;
+            if (!chats.isEmpty()) {
+                g.setColor(new Color(0x88000000, true));
+                g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
+            }
             for (Pair<Date, String> chat : chats.descendingSet()) {
-                g.drawString(chat.getValue1(), 20, getHeight() - (i * 25 + 40));
-                i++;
+                for (String line : chat.getValue1().trim().split("\n")) {
+                    g.setColor(new Color(0x88000000, true));
+                    g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
+                    g.setColor(Color.WHITE);
+                    g.drawString(line, 20, getHeight() - (i * 25 + 40));
+                    i++;
+                }
             }
         } else {
+            // drawing is separated into two parts to avoid opacity overlap
             int i = 1;
+            // draw bottom line for first line of chat
             if (!chats.isEmpty()) {
                 double firstOpacity = 1.0 - (System.currentTimeMillis() - chats.last().getValue0().getTime() - 5000.0) / 1000.0;
                 if (firstOpacity < 0) firstOpacity = 0;
@@ -394,15 +403,18 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * firstOpacity)));
                 g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
             }
+            // draw top part of remaining lines
             for (Pair<Date, String> chat : chats.descendingSet()) {
                 double opacity = 1.0 - (System.currentTimeMillis() - chat.getValue0().getTime() - 5000.0) / 1000.0;
                 if (opacity < 0) break;
                 if (opacity > 1) opacity = 1;
-                g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * opacity)));
-                g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
-                g.setColor(new Color(1f, 1f, 1f, (float) opacity));
-                g.drawString(chat.getValue1(), 20, getHeight() - (i * 25 + 40));
-                i++;
+                for (String line : chat.getValue1().trim().split("\n")) {
+                    g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * opacity)));
+                    g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
+                    g.setColor(new Color(1f, 1f, 1f, (float) opacity));
+                    g.drawString(line, 20, getHeight() - (i * 25 + 40));
+                    i++;
+                }
             }
         }
         

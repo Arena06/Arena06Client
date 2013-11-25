@@ -6,11 +6,11 @@ import com.assemblr.arena06.common.data.map.generators.MapGenerator;
 import com.assemblr.arena06.common.data.map.generators.RoomGenerator;
 import com.assemblr.arena06.common.data.Player;
 import com.assemblr.arena06.client.net.PacketClient;
+import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyEventDispatcher;
@@ -40,18 +40,6 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     private static final double FRICTION_ACCELERATION = 2000;
     private static final double MAXIMUM_VELOCITY = 400;
     
-    private static final Font FONT_PRIMARY;
-    static {
-        Font f = null;
-        try {
-            f = Font.createFont(Font.TRUETYPE_FONT, GamePanel.class.getResourceAsStream("/minecraft.ttf"));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-        FONT_PRIMARY = f;
-    }
-    
     private final Random random = new Random();
     
     private final PacketClient client;
@@ -79,7 +67,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
         InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
         System.out.println("connecting to server at " + serverAddress);
         client = new PacketClient(serverAddress);
-        player = new Player(username);
+        player = new Player(true, username);
         setPreferredSize(new Dimension(800, 600));
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
@@ -389,7 +377,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
         g.translate(-((getWidth() - player.getWidth()) / 2.0 - player.getX()), -((getHeight() - player.getHeight()) / 2.0 - player.getY()));
         
         // draw chat
-        g.setFont(FONT_PRIMARY.deriveFont(16f));
+        g.setFont(Fonts.FONT_PRIMARY.deriveFont(16f));
         if (chatting) {
             g.setColor(new Color(0x88000000, true));
             g.fillRect(10, getHeight() - 45, getWidth() - 20, 35);

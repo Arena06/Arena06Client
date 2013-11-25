@@ -31,7 +31,7 @@ public class ShotMain extends JFrame {
         ShotMain main = new ShotMain();
         GamePanel game = new GamePanel(ipAddress, port, username);
         
-        main.setTitle("Arena Game");
+        main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         main.getContentPane().add(game);
         main.pack();

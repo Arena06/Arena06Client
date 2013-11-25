@@ -215,10 +215,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 player.updateState((Map<String, Object>) packet.get("data"));
                 playerId = (Integer) packet.get("id");
                 generateMap((Long) packet.get("map-seed"));
-                client.sendData(ImmutableMap.<String, Object>of(
-                    "type", "request",
-                    "request", "sprite-list"
-                ));
+                requestSpriteList();
                 System.out.println("logged in as " + player.getName());
             } else if (packet.get("type").equals("request")) {
                 if (packet.get("request").equals("sprite-list")) {
@@ -238,6 +235,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                             ex.printStackTrace();
                         }
                     }
+                    requestingSpriteList = false;
                 }
             } else if (packet.get("type").equals("sprite")) {
                 if (packet.get("action").equals("create")) {
@@ -257,7 +255,12 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 } else if (packet.get("action").equals("update")) {
                     int spriteId = (Integer) packet.get("id");
                     if (spriteId != playerId) {
-                        sprites.get(spriteId).updateState((Map<String, Object>) packet.get("data"));
+                        Sprite s = sprites.get(spriteId);
+                        if (s != null) {
+                            s.updateState((Map<String, Object>) packet.get("data"));
+                        } else {
+                            requestSpriteList();
+                        }
                     }
                 }
             } else if (packet.get("type").equals("chat")) {
@@ -341,6 +344,16 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 "data", player.serializeState()
             ));
         }
+    }
+    
+    private boolean requestingSpriteList = false;
+    private synchronized void requestSpriteList() {
+        if (requestingSpriteList) return;
+        requestingSpriteList = true;
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "request",
+            "request", "sprite-list"
+        ));
     }
     
     @Override

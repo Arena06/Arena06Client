@@ -19,6 +19,9 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PacketClient {
     
@@ -44,6 +47,8 @@ public class PacketClient {
     private final InetSocketAddress address;
     private Channel channel;
     
+    private final ReentrantLock readLock = new ReentrantLock();
+    private final Condition readCondition = readLock.newCondition();
     private final Queue<Map<String, Object>> incomingPackets = new ConcurrentLinkedQueue<Map<String, Object>>();
     
     public PacketClient(InetSocketAddress address) {
@@ -63,7 +68,7 @@ public class PacketClient {
                     ch.pipeline().addLast(
                             new PacketEncoder(), new DataEncoder(),
                             new PacketDecoder(), new DataDecoder(),
-                            new PacketClientHandler(incomingPackets));
+                            new PacketClientHandler(readLock, readCondition, incomingPackets));
                 }
             });
             
@@ -71,6 +76,28 @@ public class PacketClient {
             channel.closeFuture().await();
         } finally {
             group.shutdownGracefully();
+        }
+    }
+    
+    public void handshake() {
+        boolean success = false;
+        readLock.lock();
+        try {
+            while (!success) {
+                sendData(ImmutableMap.<String, Object>of(
+                    "type", "handshake"
+                ));
+                try {
+                    success = readCondition.await(1000, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            incomingPackets.clear();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            readLock.unlock();
         }
     }
     

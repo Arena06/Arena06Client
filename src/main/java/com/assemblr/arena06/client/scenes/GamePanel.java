@@ -41,6 +41,7 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     private final PacketClient client;
     
     private Thread runner;
+    private Thread keepAlive;
     private boolean running = false;
     
     private int playerId = 0;
@@ -55,25 +56,14 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
     private Set<Integer> keysDown = new HashSet<Integer>();
     
     public GamePanel(String ipAddress, int port, String username) {
-        client = new PacketClient(new InetSocketAddress(ipAddress, port));
+        InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
+        System.out.println("connecting to server at " + serverAddress);
+        client = new PacketClient(serverAddress);
         player = new Player(username);
         setPreferredSize(new Dimension(800, 600));
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
-    }
-    
-    public void start() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    client.run();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        }).start();
         
-        running = true;
         runner = new Thread(new Runnable() {
             public void run() {
                 long lastUpdate = System.currentTimeMillis();
@@ -105,13 +95,46 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                 }
             }
         });
+        
+        keepAlive = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    client.sendData(ImmutableMap.<String, Object>of(
+                        "type", "keep-alive"
+                    ));
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+    
+    public void start() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    client.run();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }).start();
+        
+        System.out.println("handshaking with server...");
+        client.handshake();
+        
+        running = true;
         runner.start();
+        keepAlive.start();
         
         client.sendData(ImmutableMap.<String, Object>of(
             "type", "login",
             "data", player.serializeState()
         ));
-        System.out.println("handshaking with server...");
+        System.out.println("logging in...");
         
         Runtime.getRuntime().addShutdownHook(new Thread(){
             @Override

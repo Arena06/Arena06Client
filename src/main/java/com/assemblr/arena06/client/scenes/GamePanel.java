@@ -237,6 +237,11 @@ public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener
                     }
                     requestingSpriteList = false;
                 }
+            } else if (packet.get("type").equals("map")) {
+                if (packet.get("action").equals("load")) {
+                    generateMap((Long) packet.get("seed"));
+                    requestSpriteList();
+                }
             } else if (packet.get("type").equals("sprite")) {
                 if (packet.get("action").equals("create")) {
                     int spriteId = (Integer) packet.get("id");

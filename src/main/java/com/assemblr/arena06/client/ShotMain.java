@@ -1,16 +1,15 @@
 package com.assemblr.arena06.client;
 
 import com.assemblr.arena06.client.navigation.NavigationControler;
-import com.assemblr.arena06.client.scenes.GamePanel;
 import com.assemblr.arena06.client.scenes.MenuPanel;
 import com.assemblr.arena06.client.scenes.Panel;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.NoSuchElementException;
 import javax.swing.JFrame;
 
 public class ShotMain extends JFrame implements NavigationControler {
 
-    private Queue<Panel> panels = new LinkedList<Panel>();
+    private LinkedList<Panel> panels = new LinkedList<Panel>();
     private static ShotMain main;
 
     public static void main(String[] args) {
@@ -50,21 +49,29 @@ public class ShotMain extends JFrame implements NavigationControler {
    }
 
     public void pushPanel(Panel panel) {
-        if (panels.peek() != null) {
-            main.remove(panels.peek());
-        }
-        main.add(panel);
-        if (panels.peek() != null) {
-            panels.peek().leavingView();
-        }
+        try {
+            panels.getLast().leavingView();
+            main.remove(panels.getLast());
+            
+        } catch (NoSuchElementException ec) {}
         panel.enteringView();
+        main.add(panel);
+        
         panels.add(panel);
         panel.revalidate();
 
     }
 
     public void popPanel() {
-        panels.poll();
+        panels.getLast().leavingView();
+        main.remove(panels.getLast());
+        panels.removeLast();
+        try {
+            panels.getLast().enteringView();
+            main.add(panels.getLast());
+            
+            panels.getLast().revalidate();
+        } catch (NoSuchElementException ec) {}
     }
 
     public void swapCurrentPanel(Panel newPanel) {

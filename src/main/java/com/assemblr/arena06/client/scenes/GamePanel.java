@@ -72,7 +72,6 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         client = new PacketClient(serverAddress);
         player = new Player(true, username);
         setPreferredSize(new Dimension(800, 600));
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
         
         runner = new Thread(new Runnable() {
@@ -125,6 +124,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     }
     
     public void enteringView() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         new Thread(new Runnable() {
             public void run() {
                 try {
@@ -450,6 +450,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     }
     
     public void keyPressed(KeyEvent ke) {
+        if (ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            System.out.println("disconnection from server");
+            navigationControler.popPanel();}
         if (keysDown.contains(ke.getKeyCode())) return;
         keysDown.add(ke.getKeyCode());
         

@@ -56,7 +56,6 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
             }
         }));
         this.addMouseListener(this);
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         this.addKeyListener(this);
     }
 
@@ -195,7 +194,7 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
     boolean running;
     @Override
     public void enteringView() {
-        
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         runner = new Thread(new Runnable() {
             public void run() {
                 long lastUpdate = System.currentTimeMillis();

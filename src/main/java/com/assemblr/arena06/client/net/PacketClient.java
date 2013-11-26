@@ -17,11 +17,16 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PacketClient {
     
     public static void main(String[] args) throws Exception {
-        final PacketClient client = new PacketClient(30155);
+        final PacketClient client = new PacketClient(new InetSocketAddress("localhost", 30155));
         Thread clientThread = new Thread(new Runnable() {
             public void run() {
                 try {
@@ -39,11 +44,15 @@ public class PacketClient {
                 )));
     }
     
-    private final int port;
+    private final InetSocketAddress address;
     private Channel channel;
     
-    public PacketClient(int port) {
-        this.port = port;
+    private final ReentrantLock readLock = new ReentrantLock();
+    private final Condition readCondition = readLock.newCondition();
+    private final Queue<Map<String, Object>> incomingPackets = new ConcurrentLinkedQueue<Map<String, Object>>();
+    
+    public PacketClient(InetSocketAddress address) {
+        this.address = address;
     }
     
     public void run() throws Exception {
@@ -59,7 +68,7 @@ public class PacketClient {
                     ch.pipeline().addLast(
                             new PacketEncoder(), new DataEncoder(),
                             new PacketDecoder(), new DataDecoder(),
-                            new PacketClientHandler());
+                            new PacketClientHandler(readLock, readCondition, incomingPackets));
                 }
             });
             
@@ -67,6 +76,28 @@ public class PacketClient {
             channel.closeFuture().await();
         } finally {
             group.shutdownGracefully();
+        }
+    }
+    
+    public void handshake() {
+        boolean success = false;
+        readLock.lock();
+        try {
+            while (!success) {
+                sendData(ImmutableMap.<String, Object>of(
+                    "type", "handshake"
+                ));
+                try {
+                    success = readCondition.await(1000, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            incomingPackets.clear();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            readLock.unlock();
         }
     }
     
@@ -78,7 +109,22 @@ public class PacketClient {
                 ex.printStackTrace();
             }
         }
-        channel.writeAndFlush(new AddressedData(data, null, new InetSocketAddress("localhost", port)));
+        channel.writeAndFlush(new AddressedData(data, null, address));
+    }
+    
+    public void sendDataBlocking(Map<String, Object> data) {
+        while (channel == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        channel.writeAndFlush(new AddressedData(data, null, address)).awaitUninterruptibly();
+    }
+    
+    public Queue<Map<String, Object>> getIncomingPackets() {
+        return incomingPackets;
     }
     
 }

@@ -3,13 +3,32 @@ package com.assemblr.arena06.client.net;
 import com.assemblr.arena06.common.net.AddressedData;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 
 public class PacketClientHandler extends SimpleChannelInboundHandler<AddressedData> {
     
+    private final Lock readLock;
+    private final Condition readCondition;
+    private final Queue<Map<String, Object>> output;
+    
+    public PacketClientHandler(Lock readLock, Condition readCondition, Queue<Map<String, Object>> output) {
+        this.readLock = readLock;
+        this.readCondition = readCondition;
+        this.output = output;
+    }
+    
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AddressedData msg) throws Exception {
-        System.out.println("Data recieved: " + msg.getData());
+        readLock.lock();
+        try {
+            output.add(msg.getData());
+            readCondition.signalAll();
+        } finally {
+            readLock.unlock();
+        }
     }
     
     @Override

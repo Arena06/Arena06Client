@@ -12,6 +12,27 @@ import javax.swing.JFrame;
 public class ShotMain extends JFrame {
 
     public static void main(String[] args) {
+        String ipAddress = "localhost";
+        int port = 30155;
+        String username = "Player";
+        
+        for (String arg : args) {
+            String[] flag = arg.split("=", 2);
+            if (flag.length != 2) continue;
+            if (flag[0].equalsIgnoreCase("ip")) {
+                ipAddress = flag[1];
+                if (ipAddress.contains(":")) {
+                    String[] split = ipAddress.split(":");
+                    ipAddress = split[0];
+                    port = Integer.parseInt(split[1]);
+                }
+            } else if (flag[0].equalsIgnoreCase("port")) {
+                port = Integer.parseInt(flag[1]);
+            } else if (flag[0].equals("username")) {
+                username = flag[1];
+            }
+        }
+        
         ShotMain main = new ShotMain();
         PanelChanger pc = new PanelChanger();
         ArrayList<Button> tempButtons = new ArrayList<Button>();
@@ -24,6 +45,7 @@ public class ShotMain extends JFrame {
         
         
         Panel game = new MenuPanel(tempButtons);
+        
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         main.getContentPane().add(game);

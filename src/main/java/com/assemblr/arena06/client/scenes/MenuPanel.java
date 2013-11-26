@@ -14,6 +14,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -23,7 +24,7 @@ import javax.swing.SwingUtilities;
  *
  * @author Henry
  */
-public class MenuPanel extends Panel {
+public class MenuPanel extends Panel implements MouseListener {
 
     private final List<Button> buttons;
 

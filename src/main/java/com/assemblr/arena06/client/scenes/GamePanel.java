@@ -1,11 +1,7 @@
 package com.assemblr.arena06.client.scenes;
 
-import com.assemblr.arena06.client.data.Sprite;
-import com.assemblr.arena06.client.data.map.TileType;
-import com.assemblr.arena06.client.data.map.generators.MapGenerator;
-import com.assemblr.arena06.client.data.map.generators.RoomGenerator;
-import com.assemblr.arena06.client.data.sprites.Player;
-import com.assemblr.arena06.client.utils.Vector2D;
+import com.assemblr.arena06.client.net.PacketClient;
+import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -17,11 +13,15 @@ import java.awt.event.KeyListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -32,37 +32,38 @@ public class GamePanel extends Panel {
     private static final double FRICTION_ACCELERATION = 2000;
     private static final double MAXIMUM_VELOCITY = 400;
     
-    private Random random = new Random();
+    private final Random random = new Random();
+    
+    private final PacketClient client;
     
     private Thread runner;
+    private Thread keepAlive;
     private boolean running = false;
     
-    private Player player = new Player("assemblr");
+    private int playerId = 0;
+    private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
     private MapGenerator mapGenerator = new RoomGenerator();
     private TileType[][] map;
     private BufferedImage mapBuffer;
     
+    private boolean chatting = false;
+    private StringBuilder currentChat = new StringBuilder();
+    private TreeSet<Pair<Date, String>> chats = new TreeSet<Pair<Date, String>>();
+    
     private Vector2D velocity = new Vector2D();
     
     private Set<Integer> keysDown = new HashSet<Integer>();
     
-    public GamePanel() {
+    public GamePanel(String ipAddress, int port, String username) {
+        InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
+        System.out.println("connecting to server at " + serverAddress);
+        client = new PacketClient(serverAddress);
+        player = new Player(true, username);
         setPreferredSize(new Dimension(800, 600));
-        sprites.put(0, player);
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         addKeyListener(this);
-    }
-    
-    public void start() {
-        map = mapGenerator.generateMap();
-        paintMap();
         
-        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
-            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
-        }
-        
-        running = true;
         runner = new Thread(new Runnable() {
             public void run() {
                 long lastUpdate = System.currentTimeMillis();
@@ -94,11 +95,75 @@ public class GamePanel extends Panel {
                 }
             }
         });
+        
+        keepAlive = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    client.sendData(ImmutableMap.<String, Object>of(
+                        "type", "keep-alive"
+                    ));
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+    }
+    
+    public void start() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    client.run();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }).start();
+        
+        System.out.println("handshaking with server...");
+        client.handshake();
+        
+        running = true;
         runner.start();
+        keepAlive.start();
+        
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "login",
+            "data", player.serializeState()
+        ));
+        System.out.println("logging in...");
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+            @Override
+            public void run() {
+                client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                    "type", "logout"
+                ));
+            }
+        });
     }
     
     public void stop() {
         running = false;
+    }
+    
+    private void generateMap(long seed) {
+        map = mapGenerator.generateMap(seed);
+        paintMap();
+        
+        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
+            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
+        }
+        
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "sprite",
+            "action", "update",
+            "id", playerId,
+            "data", player.serializeState()
+        ));
     }
     
     private void paintMap() {
@@ -123,17 +188,86 @@ public class GamePanel extends Panel {
     }
     
     private void update(double delta) {
+        // process inbound packets
+        Map<String, Object> packet;
+        while ((packet = client.getIncomingPackets().poll()) != null) {
+            if (packet.get("type").equals("login")) {
+                player.updateState((Map<String, Object>) packet.get("data"));
+                playerId = (Integer) packet.get("id");
+                generateMap((Long) packet.get("map-seed"));
+                requestSpriteList();
+                System.out.println("logged in as " + player.getName());
+            } else if (packet.get("type").equals("request")) {
+                if (packet.get("request").equals("sprite-list")) {
+                    // refresh sprite list
+                    sprites.clear();
+                    Map<String, Object> spriteList = (Map<String, Object>) packet.get("data");
+                    for (Map.Entry<String, Object> entry : spriteList.entrySet()) {
+                        int spriteId = Integer.parseInt(entry.getKey());
+                        if (spriteId == playerId) continue;
+                        List<Object> spriteData = (List<Object>) entry.getValue();
+                        try {
+                            Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
+                            Sprite sprite = spriteClass.newInstance();
+                            sprite.updateState((Map<String, Object>) spriteData.get(1));
+                            sprites.put(spriteId, sprite);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    requestingSpriteList = false;
+                }
+            } else if (packet.get("type").equals("map")) {
+                if (packet.get("action").equals("load")) {
+                    generateMap((Long) packet.get("seed"));
+                    requestSpriteList();
+                }
+            } else if (packet.get("type").equals("sprite")) {
+                if (packet.get("action").equals("create")) {
+                    int spriteId = (Integer) packet.get("id");
+                    List<Object> spriteData = (List<Object>) packet.get("data");
+                    try {
+                        Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
+                        Sprite sprite = spriteClass.newInstance();
+                        sprite.updateState((Map<String, Object>) spriteData.get(1));
+                        sprites.put(spriteId, sprite);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (packet.get("action").equals("remove")) {
+                    int spriteId = (Integer) packet.get("id");
+                    sprites.remove(spriteId);
+                } else if (packet.get("action").equals("update")) {
+                    int spriteId = (Integer) packet.get("id");
+                    if (spriteId != playerId) {
+                        Sprite s = sprites.get(spriteId);
+                        if (s != null) {
+                            s.updateState((Map<String, Object>) packet.get("data"));
+                        } else {
+                            requestSpriteList();
+                        }
+                    }
+                }
+            } else if (packet.get("type").equals("chat")) {
+                long timestamp = (Long) packet.get("timestamp");
+                String content = (String) packet.get("content");
+                chats.add(new Pair<Date, String>(new Date(timestamp), content));
+            }
+        }
+        
         Vector2D acceleration = new Vector2D();
         
-        int xInput = (keysDown.contains(KeyEvent.VK_A) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_D) ? 1 : 0);
-        int yInput = (keysDown.contains(KeyEvent.VK_W) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_S) ? 1 : 0);
-        
-        if (xInput == 0 || yInput == 0) {
-            acceleration.x = INPUT_ACCELERATION * xInput;
-            acceleration.y = INPUT_ACCELERATION * yInput;
-        } else {
-            acceleration.x = INPUT_ACCELERATION * xInput / Math.sqrt(2);
-            acceleration.y = INPUT_ACCELERATION * yInput / Math.sqrt(2);
+        if (!chatting) {
+            int xInput = (keysDown.contains(KeyEvent.VK_A) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_D) ? 1 : 0);
+            int yInput = (keysDown.contains(KeyEvent.VK_W) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_S) ? 1 : 0);
+            
+            if (xInput == 0 || yInput == 0) {
+                acceleration.x = INPUT_ACCELERATION * xInput;
+                acceleration.y = INPUT_ACCELERATION * yInput;
+            } else {
+                acceleration.x = INPUT_ACCELERATION * xInput / Math.sqrt(2);
+                acceleration.y = INPUT_ACCELERATION * yInput / Math.sqrt(2);
+            }
         }
         
         velocity.add(Vector2D.multiply(acceleration, delta));
@@ -182,8 +316,29 @@ public class GamePanel extends Panel {
             }
         }
         
+        double xOld = player.getX();
+        double yOld = player.getY();
         player.setX(xNew);
         player.setY(yNew);
+        
+        if (playerId != 0 && xOld != xNew || yOld != yNew) {
+            client.sendData(ImmutableMap.<String, Object>of(
+                "type", "sprite",
+                "action", "update",
+                "id", playerId,
+                "data", player.serializeState()
+            ));
+        }
+    }
+    
+    private boolean requestingSpriteList = false;
+    private synchronized void requestSpriteList() {
+        if (requestingSpriteList) return;
+        requestingSpriteList = true;
+        client.sendData(ImmutableMap.<String, Object>of(
+            "type", "request",
+            "request", "sprite-list"
+        ));
     }
     
     @Override
@@ -205,6 +360,62 @@ public class GamePanel extends Panel {
             g.translate(-sprite.getX(), -sprite.getY());
         }
         
+        // render player separately
+        g.translate(player.getX(), player.getY());
+        player.render(g);
+        g.translate(-player.getX(), -player.getY());
+        
+        // untranslate camera
+        g.translate(-((getWidth() - player.getWidth()) / 2.0 - player.getX()), -((getHeight() - player.getHeight()) / 2.0 - player.getY()));
+        
+        // draw chat
+        g.setFont(Fonts.FONT_PRIMARY.deriveFont(16f));
+        if (chatting) {
+            g.setColor(new Color(0x88000000, true));
+            g.fillRect(10, getHeight() - 45, getWidth() - 20, 35);
+            g.setColor(Color.WHITE);
+            g.drawString(currentChat.toString() + "_", 20, getHeight() - 20);
+            
+            int i = 1;
+            if (!chats.isEmpty()) {
+                g.setColor(new Color(0x88000000, true));
+                g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
+            }
+            for (Pair<Date, String> chat : chats.descendingSet()) {
+                for (String line : chat.getValue1().trim().split("\n")) {
+                    g.setColor(new Color(0x88000000, true));
+                    g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
+                    g.setColor(Color.WHITE);
+                    g.drawString(line, 20, getHeight() - (i * 25 + 40));
+                    i++;
+                }
+            }
+        } else {
+            // drawing is separated into two parts to avoid opacity overlap
+            int i = 1;
+            // draw bottom line for first line of chat
+            if (!chats.isEmpty()) {
+                double firstOpacity = 1.0 - (System.currentTimeMillis() - chats.last().getValue0().getTime() - 5000.0) / 1000.0;
+                if (firstOpacity < 0) firstOpacity = 0;
+                else if (firstOpacity > 1) firstOpacity = 1;
+                g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * firstOpacity)));
+                g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
+            }
+            // draw top part of remaining lines
+            for (Pair<Date, String> chat : chats.descendingSet()) {
+                double opacity = 1.0 - (System.currentTimeMillis() - chat.getValue0().getTime() - 5000.0) / 1000.0;
+                if (opacity < 0) break;
+                if (opacity > 1) opacity = 1;
+                for (String line : chat.getValue1().trim().split("\n")) {
+                    g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * opacity)));
+                    g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
+                    g.setColor(new Color(1f, 1f, 1f, (float) opacity));
+                    g.drawString(line, 20, getHeight() - (i * 25 + 40));
+                    i++;
+                }
+            }
+        }
+        
     }
     
     public boolean dispatchKeyEvent(KeyEvent ke) {
@@ -213,11 +424,42 @@ public class GamePanel extends Panel {
     }
     
     public void keyTyped(KeyEvent ke) {
+        if (chatting) {
+            if (ke.getKeyChar() != KeyEvent.CHAR_UNDEFINED && Character.getType(ke.getKeyChar()) != Character.CONTROL) {
+                currentChat.append(ke.getKeyChar());
+            } else {
+                if (ke.getKeyChar() == '\u0008') {
+                    if (currentChat.length() != 0)
+                        currentChat.deleteCharAt(currentChat.length() - 1);
+                }
+            }
+        }
     }
     
     public void keyPressed(KeyEvent ke) {
         if (keysDown.contains(ke.getKeyCode())) return;
         keysDown.add(ke.getKeyCode());
+        
+        if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
+            if (!chatting) {
+                chatting = true;
+            } else {
+                String message = currentChat.toString().trim();
+                if (message.length() != 0) {
+                    client.sendData(ImmutableMap.<String, Object>of(
+                        "type", "chat",
+                        "message", currentChat.toString()
+                    ));
+                }
+                currentChat = new StringBuilder();
+                chatting = false;
+            }
+        } else if (ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            if (chatting) {
+                currentChat = new StringBuilder();
+                chatting = false;
+            }
+        }
     }
     
     public void keyReleased(KeyEvent ke) {

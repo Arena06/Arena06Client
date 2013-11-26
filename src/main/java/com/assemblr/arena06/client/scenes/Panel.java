@@ -15,6 +15,6 @@ import javax.swing.JPanel;
  *
  * @author Henry
  */
-public abstract class Panel extends JPanel implements KeyEventDispatcher, KeyListener, MouseListener {
+public abstract class Panel extends JPanel implements KeyEventDispatcher, KeyListener {
     public abstract void start();
 }

@@ -42,7 +42,7 @@ public class ShotMain extends JFrame implements NavigationControler {
         
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        main.pushPanel(new GamePanel(ipAddress, port, username, main));
+        main.pushPanel(new MenuPanel(main));
         main.pack();
         main.setSize(500, 500);
         main.setVisible(true);

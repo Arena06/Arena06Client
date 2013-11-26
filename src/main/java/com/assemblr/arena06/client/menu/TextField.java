@@ -7,6 +7,7 @@
 package com.assemblr.arena06.client.menu;
 
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 /**
  *
@@ -18,10 +19,13 @@ public class TextField extends MenuObject {
         setWidth(width);
         setHeight(height);
         needsKeyInput = true;
+        needsMouseInput = true;
+        
     }
 
     @Override
     public void keyTyped(KeyEvent e) {
+        if (isInFocus())
         switch (e.getKeyChar()) {
             case 8:
                 if (text.length() > 1) {
@@ -36,7 +40,19 @@ public class TextField extends MenuObject {
         }
     }
     
+    private boolean inFocus = false;
 
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        if (getDimensions().contains(e.getPoint())) {
+            inFocus = true;
+        }
+        else {
+            inFocus = false;
+        }
+    }
+    
+    
     /**
      * @return the text
      */
@@ -49,6 +65,13 @@ public class TextField extends MenuObject {
      */
     public void setText(String text) {
         this.text = text;
+    }
+
+    /**
+     * @return the inFocus
+     */
+    public boolean isInFocus() {
+        return inFocus;
     }
     
     

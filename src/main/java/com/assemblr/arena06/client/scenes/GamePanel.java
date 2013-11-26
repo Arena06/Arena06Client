@@ -160,6 +160,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     
     public void leavingView() {
         running = false;
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
     }
     
     private void generateMap(long seed) {

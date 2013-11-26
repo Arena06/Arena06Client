@@ -1,6 +1,13 @@
 package com.assemblr.arena06.client.scenes;
 
+import com.assemblr.arena06.common.data.Sprite;
+import com.assemblr.arena06.common.data.map.TileType;
+import com.assemblr.arena06.common.data.map.generators.MapGenerator;
+import com.assemblr.arena06.common.data.map.generators.RoomGenerator;
+import com.assemblr.arena06.common.data.Player;
 import com.assemblr.arena06.client.net.PacketClient;
+import com.assemblr.arena06.common.utils.Fonts;
+import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -22,11 +29,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import org.javatuples.Pair;
 
 
-public class GamePanel extends Panel {
+public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
@@ -154,9 +161,9 @@ public class GamePanel extends Panel {
         map = mapGenerator.generateMap(seed);
         paintMap();
         
-        do {
+        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
             player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
-        } while ((map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR));
+        }
         
         client.sendData(ImmutableMap.<String, Object>of(
             "type", "sprite",

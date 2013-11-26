@@ -16,6 +16,6 @@ public class MenuConstants {
     public static final int BUTTON_BOARDER_SIDE = 10;
     public static final int BUTTON_BOARDER_TOP = 20;
     public static final Font BUTTON_TEXT_FONT = new Font("Arial", Font.PLAIN, 30);
-    
+    public static final Font TEXTFIELD_TEXT_FONT = new Font("Arial", Font.PLAIN, 20);
     public static final int BUTTON_SPACE = 10;
 }

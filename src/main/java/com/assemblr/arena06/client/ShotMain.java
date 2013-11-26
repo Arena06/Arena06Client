@@ -1,17 +1,10 @@
 package com.assemblr.arena06.client;
 
-import com.assemblr.arena06.client.menu.Button;
-import com.assemblr.arena06.client.menu.ButtonAction;
-import com.assemblr.arena06.client.navigation.Location;
-import com.assemblr.arena06.client.navigation.MenuLocation;
 import com.assemblr.arena06.client.navigation.NavigationControler;
 import com.assemblr.arena06.client.scenes.GamePanel;
 import com.assemblr.arena06.client.scenes.MenuPanel;
 import com.assemblr.arena06.client.scenes.Panel;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import javax.swing.JFrame;
 
@@ -49,8 +42,9 @@ public class ShotMain extends JFrame implements NavigationControler {
         
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        main.pushPanel(new MenuPanel(main));
+        main.pushPanel(new GamePanel(ipAddress, port, username, main));
         main.pack();
+        main.setSize(500, 500);
         main.setVisible(true);
 
    }

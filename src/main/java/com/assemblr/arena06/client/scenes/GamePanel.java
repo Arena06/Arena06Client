@@ -1,6 +1,5 @@
 package com.assemblr.arena06.client.scenes;
 
-import com.assemblr.arena06.client.ShotMain;
 import com.assemblr.arena06.client.navigation.NavigationControler;
 import com.assemblr.arena06.common.data.Sprite;
 import com.assemblr.arena06.common.data.map.TileType;
@@ -64,7 +63,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     
     private Set<Integer> keysDown = new HashSet<Integer>();
     
-    private NavigationControler navigationControler;
+    private final NavigationControler navigationControler;
     
     public GamePanel(String ipAddress, int port, String username, NavigationControler navigationControler) {
         this.navigationControler = navigationControler;

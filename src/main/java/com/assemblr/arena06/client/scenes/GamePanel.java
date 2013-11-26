@@ -26,7 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 
-public class GamePanel extends JPanel implements KeyEventDispatcher, KeyListener {
+public class GamePanel extends Panel {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;

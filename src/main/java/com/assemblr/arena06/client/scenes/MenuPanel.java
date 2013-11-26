@@ -5,8 +5,11 @@
  */
 package com.assemblr.arena06.client.scenes;
 
+import com.assemblr.arena06.client.ShotMain;
 import com.assemblr.arena06.client.menu.Button;
+import com.assemblr.arena06.client.menu.ButtonAction;
 import com.assemblr.arena06.client.menu.MenuConstants;
+import com.assemblr.arena06.client.navigation.NavigationControler;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -16,7 +19,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import static java.awt.image.ImageObserver.WIDTH;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.SwingUtilities;
 
@@ -27,9 +32,17 @@ import javax.swing.SwingUtilities;
 public class MenuPanel extends Panel implements MouseListener {
 
     private final List<Button> buttons;
+    
+    private NavigationControler navigationControler;
+    public MenuPanel(NavigationControler navigationControler1) {
+        this.navigationControler = navigationControler1;
+        this.buttons = new ArrayList<Button>();
+        buttons.add(new Button("Go to game", new ButtonAction() {
 
-    public MenuPanel(List<Button> buttons) {
-        this.buttons = buttons;
+            public void buttonPressed(MouseEvent me) {
+               navigationControler.pushPanel(new GamePanel("localhost", 30155, "bob", navigationControler));
+            }
+        }));
         this.addMouseListener(this);
     }
 
@@ -38,13 +51,13 @@ public class MenuPanel extends Panel implements MouseListener {
         return true;
     }
 
-    private boolean fistPaint = true;
+    private boolean firstPaint = true;
     private Point buttonPaneLocation;
     @Override
     protected void paintComponent(Graphics gr) {
-        if (fistPaint) {
+        if (firstPaint) {
             layoutButtons(gr);
-            fistPaint = false;
+            firstPaint = false;
         }
         ((Graphics2D)gr).setBackground(Color.black);
         gr.clearRect(0, 0, this.getWidth(), this.getHeight());
@@ -74,7 +87,7 @@ public class MenuPanel extends Panel implements MouseListener {
         int paneWidth = maxWidth;
         buttonPane = new BufferedImage(paneWidth, paneHeight, BufferedImage.BITMASK);
         
-                //Draw buttons to pane
+        //Draw buttons to pane
         refreshButtonPane();
         buttonPaneLocation = new Point((this.getWidth() - buttonPane.getWidth()) / 2, (this.getHeight() - buttonPane.getHeight()) / 2);
 
@@ -86,7 +99,6 @@ public class MenuPanel extends Panel implements MouseListener {
         graphics.setFont(MenuConstants.BUTTON_TEXT_FONT);
         int buttonStart = 0;
         for (Button b : buttons) {
-            
             int buttonx = (buttonPane.getWidth() - b.getWidth()) / 2;
             b.setX(buttonx);
             b.setY(buttonStart);
@@ -137,7 +149,8 @@ public class MenuPanel extends Panel implements MouseListener {
     private Thread runner;
     boolean running;
     @Override
-    public void start() {
+    public void enteringView() {
+        
         runner = new Thread(new Runnable() {
             public void run() {
                 long lastUpdate = System.currentTimeMillis();
@@ -145,7 +158,8 @@ public class MenuPanel extends Panel implements MouseListener {
                     try {
                         SwingUtilities.invokeAndWait(new Runnable() {
                             public void run() {
-                                paintImmediately(0, 0, getWidth(), getHeight());
+                                //paintImmediately(0, 0, getWidth(), getHeight());
+                                repaint();
                             }
                         });
                     } catch (InterruptedException ex) {
@@ -168,7 +182,13 @@ public class MenuPanel extends Panel implements MouseListener {
                 }
             }
         });
+        running = true;
         runner.start();
+    }
+
+    @Override
+    public void leavingView() {
+        running = false;
     }
 
 }

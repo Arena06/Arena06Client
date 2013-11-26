@@ -1,18 +1,35 @@
 package com.assemblr.arena06.client;
 
+import com.assemblr.arena06.client.menu.Button;
+import com.assemblr.arena06.client.menu.ButtonAction;
+import com.assemblr.arena06.client.navigation.Location;
+import com.assemblr.arena06.client.navigation.MenuLocation;
+import com.assemblr.arena06.client.navigation.NavigationControler;
 import com.assemblr.arena06.client.scenes.GamePanel;
+import com.assemblr.arena06.client.scenes.MenuPanel;
+import com.assemblr.arena06.client.scenes.Panel;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import javax.swing.JFrame;
 
-public class ShotMain extends JFrame {
-    
+public class ShotMain extends JFrame implements NavigationControler {
+
+    private Queue<Panel> panels = new LinkedList<Panel>();
+    private static ShotMain main;
+
     public static void main(String[] args) {
         String ipAddress = "localhost";
         int port = 30155;
         String username = "Player";
-        
+
         for (String arg : args) {
             String[] flag = arg.split("=", 2);
-            if (flag.length != 2) continue;
+            if (flag.length != 2) {
+                continue;
+            }
             if (flag[0].equalsIgnoreCase("ip")) {
                 ipAddress = flag[1];
                 if (ipAddress.contains(":")) {
@@ -26,17 +43,39 @@ public class ShotMain extends JFrame {
                 username = flag[1];
             }
         }
+
+        main = new ShotMain();
         
-        ShotMain main = new ShotMain();
-        GamePanel game = new GamePanel(ipAddress, port, username);
         
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        main.getContentPane().add(game);
+        main.pushPanel(new MenuPanel(main));
         main.pack();
         main.setVisible(true);
-        
-        game.start();
+
+   }
+
+    public void pushPanel(Panel panel) {
+        if (panels.peek() != null) {
+            main.remove(panels.peek());
+        }
+        main.add(panel);
+        if (panels.peek() != null) {
+            panels.peek().leavingView();
+        }
+        panel.enteringView();
+        panels.add(panel);
+        panel.revalidate();
+
     }
-    
+
+    public void popPanel() {
+        panels.poll();
+    }
+
+    public void swapCurrentPanel(Panel newPanel) {
+        popPanel();
+        pushPanel(newPanel);
+    }
+
 }

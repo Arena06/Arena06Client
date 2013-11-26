@@ -8,7 +8,6 @@ package com.assemblr.arena06.client.scenes;
 
 import java.awt.KeyEventDispatcher;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseListener;
 import javax.swing.JPanel;
 
 /**
@@ -16,5 +15,6 @@ import javax.swing.JPanel;
  * @author Henry
  */
 public abstract class Panel extends JPanel implements KeyEventDispatcher, KeyListener {
-    public abstract void start();
+    public abstract void enteringView();
+    public abstract void leavingView();
 }

@@ -1,5 +1,7 @@
 package com.assemblr.arena06.client.scenes;
 
+import com.assemblr.arena06.client.ShotMain;
+import com.assemblr.arena06.client.navigation.NavigationControler;
 import com.assemblr.arena06.common.data.Sprite;
 import com.assemblr.arena06.common.data.map.TileType;
 import com.assemblr.arena06.common.data.map.generators.MapGenerator;
@@ -62,7 +64,10 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     
     private Set<Integer> keysDown = new HashSet<Integer>();
     
-    public GamePanel(String ipAddress, int port, String username) {
+    private NavigationControler navigationControler;
+    
+    public GamePanel(String ipAddress, int port, String username, NavigationControler navigationControler) {
+        this.navigationControler = navigationControler;
         InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
         System.out.println("connecting to server at " + serverAddress);
         client = new PacketClient(serverAddress);
@@ -78,6 +83,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                     try {
                         SwingUtilities.invokeAndWait(new Runnable() {
                             public void run() {
+                                //repaint();
                                 paintImmediately(0, 0, getWidth(), getHeight());
                             }
                         });
@@ -119,7 +125,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         });
     }
     
-    public void start() {
+    public void enteringView() {
         new Thread(new Runnable() {
             public void run() {
                 try {
@@ -153,7 +159,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         });
     }
     
-    public void stop() {
+    public void leavingView() {
         running = false;
     }
     

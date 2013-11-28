@@ -15,11 +15,13 @@ import java.awt.event.MouseEvent;
  */
 public class TextField extends MenuObject {
     private String text = "";
-    public TextField(int width, int height) {
+    private int maxCharCount = 0;
+    public TextField(int width, int height, int maxCharCount) {
         setWidth(width);
         setHeight(height);
         needsKeyInput = true;
         needsMouseInput = true;
+        this.maxCharCount = maxCharCount;
         
     }
 
@@ -35,6 +37,7 @@ public class TextField extends MenuObject {
                 }
             break;
             default:
+                if (text.length() < maxCharCount)
                 setText(getText() + e.getKeyChar());
                 break;
         }

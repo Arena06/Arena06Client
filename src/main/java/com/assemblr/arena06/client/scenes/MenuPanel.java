@@ -10,9 +10,11 @@ import com.assemblr.arena06.client.menu.ButtonAction;
 import com.assemblr.arena06.client.menu.MenuConstants;
 import com.assemblr.arena06.client.menu.MenuObject;
 import com.assemblr.arena06.client.menu.TextField;
+import com.assemblr.arena06.client.menu.TextFieldAndLabel;
 import com.assemblr.arena06.client.navigation.NavigationControler;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyEventDispatcher;
@@ -37,22 +39,17 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
     private final List<MenuObject> menuObjects;
     
     private NavigationControler navigationControler;
-    private TextField ipTextField, playNameFeild;
+    private TextFieldAndLabel ipTextField, playerNameFeild;
     public MenuPanel(NavigationControler navigationControler1) {
         this.navigationControler = navigationControler1;
         this.menuObjects = new ArrayList<MenuObject>();
-        addMenuObject(new Button("Enter your IP in the fist field and your name in the second:", new ButtonAction() {
-            public void buttonPressed(MouseEvent me) {
-            }
-        }));
-        ipTextField = new TextField(200, 30);
+        ipTextField = new TextFieldAndLabel("IP>",200, 30, 10);
         addMenuObject(ipTextField);
-        playNameFeild = new TextField(200, 30);
-        addMenuObject(playNameFeild);
+        playerNameFeild = new TextFieldAndLabel("Player Name>", 200, 30, 10);
+        addMenuObject(playerNameFeild);
         addMenuObject(new Button("Connect", new ButtonAction() {
-
             public void buttonPressed(MouseEvent me) {
-               navigationControler.pushPanel(new GamePanel(ipTextField.getText(), 30155, playNameFeild.getText(), navigationControler));
+               navigationControler.pushPanel(new GamePanel(ipTextField.getText(), 30155, playerNameFeild.getText(), navigationControler));
             }
         }));
         this.addMouseListener(this);
@@ -74,9 +71,7 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         buttonPaneLocation.x = (this.getWidth() - buttonPaneLocation.width) / 2; 
         buttonPaneLocation.y = (this.getHeight() - buttonPaneLocation.height) / 2;
     }
-    
-    private void layoutButtons(Graphics gr) {
-        //Init buttons and button pane
+    private void calculateButtonDimensions(Graphics gr) {
         int totalHeight = 0, maxWidth = 0;
         for (MenuObject menuObject : menuObjects) {
             if (menuObject instanceof Button) {
@@ -88,9 +83,12 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
                 button.setHeight((2 * MenuConstants.BUTTON_BOARDER_TOP) + stringHeight);
             }
             if (menuObject instanceof TextField) {
-                TextField textField = (TextField) menuObject;
-                
-                
+                //TextField textField = (TextField) menuObject;
+            }
+            if (menuObject instanceof TextFieldAndLabel) {
+                TextFieldAndLabel tfl = (TextFieldAndLabel) menuObject;
+                int stringWidth = gr.getFontMetrics(MenuConstants.LABEL_TEXT_FONT).stringWidth(tfl.getLabelText());
+                tfl.setWidth(stringWidth + MenuConstants.LABEL_SPACE + tfl.getTextFieldWidth());
             }
             if (menuObject.getWidth() > maxWidth) {
                     maxWidth = menuObject.getWidth();
@@ -102,16 +100,22 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
             totalHeight -= MenuConstants.BUTTON_SPACE;
         }
         buttonPaneLocation = new Rectangle(maxWidth, totalHeight);
-        buttonPaneLocation.x = (this.getWidth() - buttonPaneLocation.width) / 2; 
+    }
+    private boolean fistPaint = true;
+    private void layoutButtons(Graphics gr) {
+        //Init buttons and button pane
+        if (fistPaint) {
+            calculateButtonDimensions(gr);
+            fistPaint = false;
+        }
+        buttonPaneLocation.x = (this.getWidth() - buttonPaneLocation.width - 20); 
         buttonPaneLocation.y = (this.getHeight() - buttonPaneLocation.height) / 2;
         int buttonStart = 0;
         for (MenuObject menuObject : menuObjects) {
-            menuObject.setX(buttonPaneLocation.x + (buttonPaneLocation.width - menuObject.getWidth()) / 2);
+            menuObject.setX(buttonPaneLocation.x + (buttonPaneLocation.width - menuObject.getWidth()));
             menuObject.setY(buttonPaneLocation.y + buttonStart);
             buttonStart += menuObject.getHeight() + MenuConstants.BUTTON_SPACE;
         }
-        //Draw buttons to pane
-        
 
     }
     
@@ -121,15 +125,15 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         for (MenuObject m : menuObjects) {
             if (m instanceof Button) {
                 Button b= (Button) m;
-                graphics.setColor(Color.green);
+                graphics.setColor(new Color(20,20,20));
                 graphics.fillRect(m.getX(), m.getY(), m.getWidth(), m.getHeight());
-                graphics.setColor(Color.red);
+                graphics.setColor(Color.green);
                 graphics.setFont(MenuConstants.BUTTON_TEXT_FONT);
                 graphics.drawString(b.text, b.getX() + MenuConstants.BUTTON_BOARDER_SIDE, b.getY() - MenuConstants.BUTTON_BOARDER_TOP + b.getHeight());
             }
             if (m instanceof TextField) {
                 TextField tf = (TextField) m;
-                graphics.setColor(Color.red);
+                graphics.setColor(Color.green);
                 Graphics2D g2 = (Graphics2D) graphics;
                 float thickness = 1;
                 if (tf.isInFocus()) {
@@ -142,6 +146,23 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
                 graphics.setFont(MenuConstants.TEXTFIELD_TEXT_FONT);
                 graphics.drawString(tf.getText(), tf.getX() + 5, tf.getY() - 5 + tf.getHeight());
 
+            }
+            if (m instanceof TextFieldAndLabel) {
+                TextFieldAndLabel tfl = (TextFieldAndLabel) m;
+                graphics.setColor(new Color(0,255,0));
+                Graphics2D g2 = (Graphics2D) graphics;
+                float thickness = 1;
+                if (tfl.isInFocus()) {
+                    thickness = 3;
+                }
+                Stroke oldStroke = g2.getStroke();
+                g2.setStroke(new BasicStroke(thickness));
+                graphics.drawRect(tfl.getTextFieldX(), tfl.getTextFieldY(), tfl.getTextFieldWidth() - 1, tfl.getTextFieldHeight() - 1);
+                g2.setStroke(oldStroke);
+                graphics.setFont(MenuConstants.TEXTFIELD_TEXT_FONT);
+                graphics.drawString(tfl.getText(), tfl.getTextFieldX() + 5, tfl.getTextFieldY() - 5 + tfl.getTextFieldHeight());
+                graphics.setFont(MenuConstants.LABEL_TEXT_FONT);
+                graphics.drawString(tfl.getLabelText(), tfl.getX(), tfl.getY() - 5 + tfl.getHeight());
             }
         }
     }

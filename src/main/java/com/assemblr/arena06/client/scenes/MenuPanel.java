@@ -49,7 +49,13 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         addMenuObject(playerNameFeild);
         addMenuObject(new Button("Connect", new ButtonAction() {
             public void buttonPressed(MouseEvent me) {
-               navigationControler.pushPanel(new GamePanel(ipTextField.getText(), 30155, playerNameFeild.getText(), navigationControler));
+                String ip = ipTextField.getText();
+                int port = 30155;
+                if (ip.contains(":")) {
+                    port = Integer.parseInt(ip.split(":")[1]);
+                    ip = ip.split(":")[0];
+                }
+               navigationControler.pushPanel(new GamePanel(ip, port, playerNameFeild.getText(), navigationControler));
             }
         }));
         this.addMouseListener(this);

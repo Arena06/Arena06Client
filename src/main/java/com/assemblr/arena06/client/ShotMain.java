@@ -1,6 +1,7 @@
 package com.assemblr.arena06.client;
 
 import com.assemblr.arena06.client.navigation.NavigationControler;
+import com.assemblr.arena06.client.scenes.GamePanel;
 import com.assemblr.arena06.client.scenes.MenuPanel;
 import com.assemblr.arena06.client.scenes.Panel;
 import java.util.LinkedList;
@@ -41,7 +42,10 @@ public class ShotMain extends JFrame implements NavigationControler {
         
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        main.pushPanel(new MenuPanel(main));
+        if (args.length > 1)
+            main.pushPanel(new GamePanel(ipAddress, port, username, main));
+        else
+            main.pushPanel(new MenuPanel(main));
         main.pack();
         main.setSize(500, 500);
         main.setVisible(true);

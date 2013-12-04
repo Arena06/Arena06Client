@@ -25,9 +25,14 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 
 /**
@@ -43,9 +48,9 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
     public MenuPanel(NavigationControler navigationControler1) {
         this.navigationControler = navigationControler1;
         this.menuObjects = new ArrayList<MenuObject>();
-        ipTextField = new TextFieldAndLabel("IP>",200, 30, 10);
+        ipTextField = new TextFieldAndLabel("IP>",230, 30, 19);
         addMenuObject(ipTextField);
-        playerNameFeild = new TextFieldAndLabel("Player Name>", 200, 30, 10);
+        playerNameFeild = new TextFieldAndLabel("Player Name>", 230, 30, 19);
         addMenuObject(playerNameFeild);
         addMenuObject(new Button("Connect", new ButtonAction() {
             public void buttonPressed(MouseEvent me) {
@@ -60,6 +65,13 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         }));
         this.addMouseListener(this);
         this.addKeyListener(this);
+        try {
+            titleImage = ImageIO.read(this.getClass().getClassLoader().getSystemResourceAsStream("menu/06.png"));
+        } catch (IOException ex) {
+            System.out.println("Failed to load menu background resource.  Complete stack trace: ");
+            ex.printStackTrace();
+            titleImage = new BufferedImage(0, 0, BufferedImage.TYPE_4BYTE_ABGR);
+        }
     }
 
     public boolean dispatchKeyEvent(KeyEvent ke) {
@@ -67,16 +79,20 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         return true;
     }
     
-    private Rectangle buttonPaneLocation;
+    private Rectangle buttonPane;
+    private BufferedImage titleImage;
     @Override
     protected void paintComponent(Graphics gr) {
         ((Graphics2D)gr).setBackground(Color.black);
         gr.clearRect(0, 0, this.getWidth(), this.getHeight());
+        //gr.drawImage(titleImage, 20, (this.getHeight() - titleImage.getHeight()) / 2, null);
         refreshButtonPane(gr);
         
-        buttonPaneLocation.x = (this.getWidth() - buttonPaneLocation.width) / 2; 
-        buttonPaneLocation.y = (this.getHeight() - buttonPaneLocation.height) / 2;
+        buttonPane.x = (this.getWidth() - buttonPane.width) / 2; 
+        buttonPane.y = (this.getHeight() - buttonPane.height) / 2;
     }
+    
+    
     private void calculateButtonDimensions(Graphics gr) {
         int totalHeight = 0, maxWidth = 0;
         for (MenuObject menuObject : menuObjects) {
@@ -105,7 +121,7 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         if (menuObjects.size() > 0) {
             totalHeight -= MenuConstants.BUTTON_SPACE;
         }
-        buttonPaneLocation = new Rectangle(maxWidth, totalHeight);
+        buttonPane = new Rectangle(maxWidth, totalHeight);
     }
     private boolean fistPaint = true;
     private void layoutButtons(Graphics gr) {
@@ -114,12 +130,12 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
             calculateButtonDimensions(gr);
             fistPaint = false;
         }
-        buttonPaneLocation.x = (this.getWidth() - buttonPaneLocation.width - 20); 
-        buttonPaneLocation.y = (this.getHeight() - buttonPaneLocation.height) / 2;
+        buttonPane.x = (this.getWidth() - buttonPane.width - 20); 
+        buttonPane.y = (this.getHeight() - buttonPane.height) / 2;
         int buttonStart = 0;
         for (MenuObject menuObject : menuObjects) {
-            menuObject.setX(buttonPaneLocation.x + (buttonPaneLocation.width - menuObject.getWidth()));
-            menuObject.setY(buttonPaneLocation.y + buttonStart);
+            menuObject.setX(buttonPane.x + (buttonPane.width - menuObject.getWidth()));
+            menuObject.setY(buttonPane.y + buttonStart);
             buttonStart += menuObject.getHeight() + MenuConstants.BUTTON_SPACE;
         }
 
@@ -131,7 +147,7 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
         for (MenuObject m : menuObjects) {
             if (m instanceof Button) {
                 Button b= (Button) m;
-                graphics.setColor(new Color(20,20,20));
+                graphics.setColor(new Color(40,40,40));
                 graphics.fillRect(m.getX(), m.getY(), m.getWidth(), m.getHeight());
                 graphics.setColor(Color.green);
                 graphics.setFont(MenuConstants.BUTTON_TEXT_FONT);
@@ -261,6 +277,10 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
     public void leavingView() {
         running = false;
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
+    }
+
+    @Override
+    public void dispose() {
     }
 
 }

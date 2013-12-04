@@ -47,6 +47,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     private Thread runner;
     private Thread keepAlive;
     private boolean running = false;
+    private boolean stayAlive = false;
+    
+    private Thread shutdownHook;
     
     private int playerId = 0;
     private Player player;
@@ -109,7 +112,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         
         keepAlive = new Thread(new Runnable() {
             public void run() {
-                while (true) {
+                while (stayAlive) {
                     client.sendData(ImmutableMap.<String, Object>of(
                         "type", "keep-alive"
                     ));
@@ -121,6 +124,15 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                 }
             }
         });
+        
+         shutdownHook = new Thread(){
+            @Override
+            public void run() {
+                client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                    "type", "logout"
+                ));
+            }
+        };
     }
     
     public void enteringView() {
@@ -140,6 +152,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         
         running = true;
         runner.start();
+        stayAlive = true;
         keepAlive.start();
         
         client.sendData(ImmutableMap.<String, Object>of(
@@ -148,14 +161,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         ));
         System.out.println("logging in...");
         
-        Runtime.getRuntime().addShutdownHook(new Thread(){
-            @Override
-            public void run() {
-                client.sendDataBlocking(ImmutableMap.<String, Object>of(
-                    "type", "logout"
-                ));
-            }
-        });
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
     
     public void leavingView() {
@@ -481,6 +487,15 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     public void keyReleased(KeyEvent ke) {
         if (!keysDown.contains(ke.getKeyCode())) return;
         keysDown.remove(ke.getKeyCode());
+    }
+
+    @Override
+    public void dispose() {
+        stayAlive = false;
+        client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                    "type", "logout"
+        ));
+        Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
     
 }

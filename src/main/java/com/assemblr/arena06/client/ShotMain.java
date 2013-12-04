@@ -47,7 +47,7 @@ public class ShotMain extends JFrame implements NavigationControler {
         else
             main.pushPanel(new MenuPanel(main));
         main.pack();
-        main.setSize(500, 500);
+        main.setSize(700, 700);
         main.setVisible(true);
 
    }
@@ -68,6 +68,7 @@ public class ShotMain extends JFrame implements NavigationControler {
 
     public void popPanel() {
         panels.getLast().leavingView();
+        panels.getLast().dispose();
         main.remove(panels.getLast());
         panels.removeLast();
         try {

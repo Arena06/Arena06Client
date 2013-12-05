@@ -14,7 +14,6 @@ import com.assemblr.arena06.client.menu.TextFieldAndLabel;
 import com.assemblr.arena06.client.navigation.NavigationControler;
 import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyEventDispatcher;
@@ -30,8 +29,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 

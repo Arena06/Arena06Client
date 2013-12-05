@@ -7,8 +7,11 @@ import com.assemblr.arena06.common.data.map.generators.MapGenerator;
 import com.assemblr.arena06.common.data.map.generators.RoomGenerator;
 import com.assemblr.arena06.common.data.Player;
 import com.assemblr.arena06.client.net.PacketClient;
+import com.assemblr.arena06.common.data.Bullet;
+import com.assemblr.arena06.common.data.UpdateableSprite;
 import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -18,6 +21,8 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
@@ -34,7 +39,7 @@ import javax.swing.SwingUtilities;
 import org.javatuples.Pair;
 
 
-public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener {
+public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener, MouseListener {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
@@ -51,9 +56,11 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
     
     private Thread shutdownHook;
     
+    private boolean alive = true;
     private int playerId = 0;
     private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
+    private Map<Integer, UpdateableSprite> updateableSprites = new HashMap<Integer, UpdateableSprite>();
     private MapGenerator mapGenerator = new RoomGenerator();
     private TileType[][] map;
     private BufferedImage mapBuffer;
@@ -76,6 +83,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         player = new Player(true, username);
         setPreferredSize(new Dimension(800, 600));
         addKeyListener(this);
+        addMouseListener(this);
         
         runner = new Thread(new Runnable() {
             public void run() {
@@ -230,6 +238,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                             Sprite sprite = spriteClass.newInstance();
                             sprite.updateState((Map<String, Object>) spriteData.get(1));
                             sprites.put(spriteId, sprite);
+                            if (sprite instanceof UpdateableSprite) {
+                                updateableSprites.put(spriteId, (UpdateableSprite) sprite);
+                            }
                         } catch (Exception ex) {
                             ex.printStackTrace();
                         }
@@ -250,12 +261,21 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                         Sprite sprite = spriteClass.newInstance();
                         sprite.updateState((Map<String, Object>) spriteData.get(1));
                         sprites.put(spriteId, sprite);
+                        if (sprite instanceof UpdateableSprite) {
+                            updateableSprites.put(spriteId, (UpdateableSprite) sprite);
+                        }
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 } else if (packet.get("action").equals("remove")) {
                     int spriteId = (Integer) packet.get("id");
+                    if (spriteId == playerId) {
+                        alive = false;
+                    }
                     sprites.remove(spriteId);
+                    if (updateableSprites.containsKey(spriteId)){
+                        updateableSprites.remove(spriteId);
+                    }
                 } else if (packet.get("action").equals("update")) {
                     int spriteId = (Integer) packet.get("id");
                     if (spriteId != playerId) {
@@ -273,7 +293,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                 chats.add(new Pair<Date, String>(new Date(timestamp), content));
             }
         }
-        
+        for (Map.Entry<Integer, UpdateableSprite> updateableSprite : updateableSprites.entrySet()) {
+            updateableSprite.getValue().update(delta);
+        }
         Vector2D acceleration = new Vector2D();
         
         if (!chatting) {
@@ -303,38 +325,39 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         double xNew = player.getX() + velocity.x * delta;
         double yNew = player.getY() + velocity.y * delta;
         
-        if (velocity.x < 0) {
-            int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
-            for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
-                if (map[xTile][yTile].isSolid()) {
-                    xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
+        if (alive) {
+            if (velocity.x < 0) {
+                int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
+                for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                    if (map[xTile][yTile].isSolid()) {
+                        xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
+                    }
+                }
+            } else if (velocity.x > 0) {
+                int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
+                for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                    if (map[xTile][yTile].isSolid()) {
+                        xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
+                    }
                 }
             }
-        } else if (velocity.x > 0) {
-            int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
-            for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
-                if (map[xTile][yTile].isSolid()) {
-                    xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
+
+            if (velocity.y < 0) {
+                int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
+                for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                    if (map[xTile][yTile].isSolid()) {
+                        yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
+                    }
+                }
+            } else if (velocity.y > 0) {
+                int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
+                for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                    if (map[xTile][yTile].isSolid()) {
+                        yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
+                    }
                 }
             }
         }
-        
-        if (velocity.y < 0) {
-            int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
-            for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
-                if (map[xTile][yTile].isSolid()) {
-                    yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
-                }
-            }
-        } else if (velocity.y > 0) {
-            int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
-            for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
-                if (map[xTile][yTile].isSolid()) {
-                    yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
-                }
-            }
-        }
-        
         double xOld = player.getX();
         double yOld = player.getY();
         player.setX(xNew);
@@ -381,7 +404,8 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
         
         // render player separately
         g.translate(player.getX(), player.getY());
-        player.render(g);
+        if (alive)
+            player.render(g);
         g.translate(-player.getX(), -player.getY());
         
         // untranslate camera
@@ -496,6 +520,34 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener 
                     "type", "logout"
         ));
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
+    }
+
+    public void mouseClicked(MouseEvent e) {
+    }
+
+    public void mousePressed(MouseEvent e) {
+        Bullet b = new Bullet();
+        b.setOwner(player.getName());
+        Vector2D difference = new Vector2D(e.getPoint().x - this.getWidth() / 2, e.getPoint().y - this.getHeight() / 2);
+        double angle = difference.getAngle();
+        b.setVelocity(new Vector2D(angle, 800, true));
+        b.setWidth(4);
+        b.setHeight(4);
+        b.setPosition((new Vector2D(angle, player.getWidth() * Math.sqrt(2) / 2, true)).add(player.getCenter()).getPoint());
+        client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                "type", "sprite",
+                "action", "create",
+                "data", ImmutableList.<Object>of(Bullet.class.getName(), b.serializeState())
+        ));
+    }
+
+    public void mouseReleased(MouseEvent e) {
+    }
+
+    public void mouseEntered(MouseEvent e) {
+    }
+
+    public void mouseExited(MouseEvent e) {
     }
     
 }

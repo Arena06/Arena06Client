@@ -56,7 +56,6 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     
     private Thread shutdownHook;
     
-    private boolean alive = true;
     private int playerId = 0;
     private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
@@ -231,8 +230,20 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
                     Map<String, Object> spriteList = (Map<String, Object>) packet.get("data");
                     for (Map.Entry<String, Object> entry : spriteList.entrySet()) {
                         int spriteId = Integer.parseInt(entry.getKey());
-                        if (spriteId == playerId) continue;
                         List<Object> spriteData = (List<Object>) entry.getValue();
+                        if (spriteId == playerId) {
+                            player = new Player(true, player.getName());
+                            player.updateState((Map<String, Object>) spriteData.get(1));
+                            client.sendData(
+                            ImmutableMap.<String, Object>of(
+                                            "type", "sprite",
+                                            "action", "validate",
+                                            "id", playerId
+                                    )
+                            );
+                            continue;
+                        }
+                        
                         try {
                             Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
                             Sprite sprite = spriteClass.newInstance();
@@ -269,9 +280,6 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
                     }
                 } else if (packet.get("action").equals("remove")) {
                     int spriteId = (Integer) packet.get("id");
-                    if (spriteId == playerId) {
-                        alive = false;
-                    }
                     sprites.remove(spriteId);
                     if (updateableSprites.containsKey(spriteId)){
                         updateableSprites.remove(spriteId);
@@ -285,6 +293,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
                         } else {
                             requestSpriteList();
                         }
+                    } else {
+                        player = new Player();
+                        player.updateState((Map<String, Object>) packet.get("data"));
                     }
                 }
             } else if (packet.get("type").equals("chat")) {
@@ -325,7 +336,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         double xNew = player.getX() + velocity.x * delta;
         double yNew = player.getY() + velocity.y * delta;
         
-        if (alive) {
+        if (player.isAlive()) {
             if (velocity.x < 0) {
                 int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
                 for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
@@ -404,8 +415,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         
         // render player separately
         g.translate(player.getX(), player.getY());
-        if (alive)
-            player.render(g);
+        player.render(g);
         g.translate(-player.getX(), -player.getY());
         
         // untranslate camera
@@ -526,19 +536,21 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     }
 
     public void mousePressed(MouseEvent e) {
-        Bullet b = new Bullet();
-        b.setOwner(player.getName());
-        Vector2D difference = new Vector2D(e.getPoint().x - this.getWidth() / 2, e.getPoint().y - this.getHeight() / 2);
-        double angle = difference.getAngle();
-        b.setVelocity(new Vector2D(angle, 800, true));
-        b.setWidth(4);
-        b.setHeight(4);
-        b.setPosition((new Vector2D(angle, player.getWidth() * Math.sqrt(2) / 2, true)).add(player.getCenter()).getPoint());
-        client.sendDataBlocking(ImmutableMap.<String, Object>of(
-                "type", "sprite",
-                "action", "create",
-                "data", ImmutableList.<Object>of(Bullet.class.getName(), b.serializeState())
-        ));
+        if (player.isAlive()) {
+            Bullet b = new Bullet();
+            b.setOwner(player.getName());
+            Vector2D difference = new Vector2D(e.getPoint().x - this.getWidth() / 2, e.getPoint().y - this.getHeight() / 2);
+            double angle = difference.getAngle();
+            b.setVelocity(new Vector2D(angle, 800, true));
+            b.setWidth(4);
+            b.setHeight(4);
+            b.setPosition((new Vector2D(angle, player.getWidth() * Math.sqrt(2) / 2, true)).add(player.getCenter()).getPoint());
+            client.sendDataBlocking(ImmutableMap.<String, Object>of(
+                    "type", "sprite",
+                    "action", "create",
+                    "data", ImmutableList.<Object>of(Bullet.class.getName(), b.serializeState())
+            ));
+        }
     }
 
     public void mouseReleased(MouseEvent e) {

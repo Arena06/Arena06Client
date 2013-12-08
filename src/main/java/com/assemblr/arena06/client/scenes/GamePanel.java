@@ -538,6 +538,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     public void mousePressed(MouseEvent e) {
         if (player.isAlive()) {
             Bullet b = new Bullet();
+            b.setDamage(.6);
             b.setOwner(player.getName());
             Vector2D difference = new Vector2D(e.getPoint().x - this.getWidth() / 2, e.getPoint().y - this.getHeight() / 2);
             double angle = difference.getAngle();

@@ -9,12 +9,12 @@ import com.assemblr.arena06.common.data.Player;
 import com.assemblr.arena06.client.net.PacketClient;
 import com.assemblr.arena06.common.data.Bullet;
 import com.assemblr.arena06.common.data.UpdateableSprite;
+import com.assemblr.arena06.common.data.weapon.Weapon;
 import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -26,10 +26,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,7 +45,7 @@ import javax.swing.SwingUtilities;
 import org.javatuples.Pair;
 
 
-public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener, MouseListener {
+public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener, MouseListener, MouseWheelListener {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
@@ -87,6 +90,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         setPreferredSize(new Dimension(800, 600));
         addKeyListener(this);
         addMouseListener(this);
+        addMouseWheelListener(this);
         
         runner = new Thread(new Runnable() {
             public void run() {
@@ -298,7 +302,6 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
                             requestSpriteList();
                         }
                     } else {
-                        player = new Player();
                         player.updateState((Map<String, Object>) packet.get("data"));
                     }
                 }
@@ -325,6 +328,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
             if (player.getReloadRemaining() < 0) {
                 player.setReloadRemaining(0);
                 player.setIsReloading(false);
+                player.setLoadedBullets(player.getWeapon().getMagSize());
                 playerNeedsUpdate = true;
             }
         }
@@ -445,6 +449,22 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         // untranslate camera
         g.translate(-((getWidth() - player.getWidth()) / 2.0 - player.getX()), -((getHeight() - player.getHeight()) / 2.0 - player.getY()));
         
+        // draw weapon info
+        if (player.isAlive()) {
+            g.setColor(Color.red);
+            g.setFont(Fonts.FONT_PRIMARY.deriveFont(16f));
+            g.drawString(player.getWeapon().getName(), this.getWidth() - 120 - g.getFontMetrics().stringWidth(player.getWeapon().getName()), this.getHeight() - 10);
+            g.setColor(Color.white);
+            g.drawRect(this.getWidth() - 109, this.getHeight() - 19, 104, 14);
+            if (player.isReloading()) {
+                g.setColor(Color.red);
+                g.fillRect(this.getWidth() - 108, this.getHeight() - 17, (int) Math.round(101 * ((double) player.getWeapon().getReloadTime() - (double) player.getReloadRemaining()) / (double) player.getWeapon().getReloadTime()), 11);
+            } else {
+                g.fillRect(this.getWidth() - 108, this.getHeight() - 17, (int) Math.round(101 * (double) player.getLoadedBullets() / (double) player.getWeapon().getMagSize()), 11);
+            }
+          
+        }
+        
         // draw chat
         g.setFont(Fonts.FONT_PRIMARY.deriveFont(16f));
         if (chatting) {
@@ -516,7 +536,13 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     public void keyPressed(KeyEvent ke) {
         if (ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
             System.out.println("disconnection from server");
-            navigationControler.popPanel();}
+            navigationControler.popPanel();
+        }
+        if (ke.getKeyChar() == 'e' || ke.getKeyChar() == 'E') {
+            player.incrementWeaponIndex(1);
+        } else if (ke.getKeyChar() == 'q' || ke.getKeyChar() == 'Q') {
+            player.incrementWeaponIndex(-1);
+        }
         if (keysDown.contains(ke.getKeyCode())) return;
         keysDown.add(ke.getKeyCode());
         
@@ -574,7 +600,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         player.setLoadedBullets(player.getLoadedBullets() - 1);
         if (player.getLoadedBullets() <= 0) {
             player.setIsReloading(true);
-            player.setLoadedBullets(player.getWeapon().getMagSize());
+            player.setLoadedBullets(0);
             player.setReloadRemaining(player.getWeapon().getReloadTime());
         }
     }
@@ -596,6 +622,11 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     }
 
     public void mouseExited(MouseEvent e) {
+    }
+
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        System.out.println(e.getClickCount());
+        player.incrementWeaponIndex(e.getClickCount());
     }
     
 }

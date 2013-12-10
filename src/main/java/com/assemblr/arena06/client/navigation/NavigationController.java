@@ -8,7 +8,7 @@ package com.assemblr.arena06.client.navigation;
 
 import com.assemblr.arena06.client.scenes.Panel;
 
-public interface NavigationControler {
+public interface NavigationController {
     public void pushPanel(Panel panel);
     public void popPanel();
     public void swapCurrentPanel(Panel newPanel);

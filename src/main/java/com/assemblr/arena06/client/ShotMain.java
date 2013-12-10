@@ -1,6 +1,6 @@
 package com.assemblr.arena06.client;
 
-import com.assemblr.arena06.client.navigation.NavigationControler;
+import com.assemblr.arena06.client.navigation.NavigationController;
 import com.assemblr.arena06.client.scenes.GamePanel;
 import com.assemblr.arena06.client.scenes.MenuPanel;
 import com.assemblr.arena06.client.scenes.Panel;
@@ -8,7 +8,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import javax.swing.JFrame;
 
-public class ShotMain extends JFrame implements NavigationControler {
+public class ShotMain extends JFrame implements NavigationController {
 
     private LinkedList<Panel> panels = new LinkedList<Panel>();
     private static ShotMain main;

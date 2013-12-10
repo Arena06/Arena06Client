@@ -11,7 +11,7 @@ import com.assemblr.arena06.client.menu.MenuConstants;
 import com.assemblr.arena06.client.menu.MenuObject;
 import com.assemblr.arena06.client.menu.TextField;
 import com.assemblr.arena06.client.menu.TextFieldAndLabel;
-import com.assemblr.arena06.client.navigation.NavigationControler;
+import com.assemblr.arena06.client.navigation.NavigationController;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -40,10 +40,10 @@ public class MenuPanel extends Panel implements MouseListener, KeyEventDispatche
 
     private final List<MenuObject> menuObjects;
     
-    private NavigationControler navigationControler;
+    private NavigationController navigationControler;
     private TextFieldAndLabel ipTextField, playerNameFeild;
-    public MenuPanel(NavigationControler navigationControler1) {
-        this.navigationControler = navigationControler1;
+    public MenuPanel(NavigationController navigationController) {
+        this.navigationControler = navigationController;
         this.menuObjects = new ArrayList<MenuObject>();
         ipTextField = new TextFieldAndLabel("IP>",230, 30, 19);
         addMenuObject(ipTextField);

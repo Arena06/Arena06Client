@@ -1,6 +1,6 @@
 package com.assemblr.arena06.client.scenes;
 
-import com.assemblr.arena06.client.navigation.NavigationControler;
+import com.assemblr.arena06.client.navigation.NavigationController;
 import com.assemblr.arena06.common.data.Sprite;
 import com.assemblr.arena06.common.data.map.TileType;
 import com.assemblr.arena06.common.data.map.generators.MapGenerator;
@@ -79,9 +79,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     private Set<Integer> keysDown = new HashSet<Integer>();
     private boolean mouseDown;
     
-    private final NavigationControler navigationControler;
+    private final NavigationController navigationControler;
     
-    public GamePanel(String ipAddress, int port, String username, NavigationControler navigationControler) {
+    public GamePanel(String ipAddress, int port, String username, NavigationController navigationControler) {
         this.navigationControler = navigationControler;
         InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
         System.out.println("connecting to server at " + serverAddress);

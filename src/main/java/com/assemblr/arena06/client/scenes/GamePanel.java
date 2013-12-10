@@ -332,7 +332,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
                 playerNeedsUpdate = true;
             }
         }
-        if (mouseDown && player.isAlive() && !player.isReloading() && player.cooldownRemaining() == 0 && player.getWeapon().isFullAuto()) {
+        if (mouseDown && player.isAlive() && !player.isReloading() && player.cooldownRemaining() == 0 && player.getWeapon().isFullAuto() && !player.getWeaponData().isOutOfAmo()) {
             shoot(new Point(MouseInfo.getPointerInfo().getLocation().x - getLocationOnScreen().x, MouseInfo.getPointerInfo().getLocation().y - getLocationOnScreen().y));
         } 
         Vector2D acceleration = new Vector2D();
@@ -458,11 +458,12 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
             g.drawRect(this.getWidth() - 109, this.getHeight() - 19, 104, 14);
             if (player.isReloading()) {
                 g.setColor(Color.red);
-                g.fillRect(this.getWidth() - 108, this.getHeight() - 17, (int) Math.round(101 * ((double) player.getWeapon().getReloadTime() - (double) player.getReloadRemaining()) / (double) player.getWeapon().getReloadTime()), 11);
+                g.fillRect(this.getWidth() - 107, this.getHeight() - 17, (int) Math.round(101 * ((double) player.getWeapon().getReloadTime() - (double) player.getReloadRemaining()) / (double) player.getWeapon().getReloadTime()), 11);
             } else {
-                g.fillRect(this.getWidth() - 108, this.getHeight() - 17, (int) Math.round(101 * (double) player.getLoadedBullets() / (double) player.getWeapon().getMagSize()), 11);
+                g.fillRect(this.getWidth() - 107, this.getHeight() - 17, (int) Math.round(101 * (double) player.getLoadedBullets() / (double) player.getWeapon().getMagSize()), 11);
             }
-          
+            
+            g.drawString("" + player.getWeaponData().getCartregesReamaining(), this.getWidth() - 150 - g.getFontMetrics().stringWidth(player.getWeapon().getName()), this.getHeight() - 10);
         }
         
         // draw chat
@@ -599,9 +600,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         player.setCooldownRemaining(player.getWeapon().getFireTime());
         player.setLoadedBullets(player.getLoadedBullets() - 1);
         if (player.getLoadedBullets() <= 0) {
-            player.setIsReloading(true);
-            player.setLoadedBullets(0);
-            player.setReloadRemaining(player.getWeapon().getReloadTime());
+            player.getWeaponData().reload();
         }
     }
 
@@ -610,7 +609,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
 
     public void mousePressed(MouseEvent e) {
         mouseDown = true;
-        if (player.isAlive() && player.cooldownRemaining() == 0 && !player.isReloading())
+        if (player.isAlive() && player.cooldownRemaining() == 0 && !player.isReloading() && !player.getWeaponData().isOutOfAmo())
             shoot(e.getPoint());
     }
 

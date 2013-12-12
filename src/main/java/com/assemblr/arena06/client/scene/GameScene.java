@@ -54,7 +54,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     
     private final PacketClient client;
     
-    private final DeltaRunner runner;
+    private DeltaRunner runner;
     private Thread keepAlive;
     private boolean stayAlive = false;
     
@@ -86,6 +86,23 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         addKeyListener(this);
         addMouseListener(this);
         addMouseWheelListener(this);
+    }
+    
+    @Override
+    public void sceneWillAppear() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    client.run();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }).start();
+        
+        System.out.println("handshaking with server...");
+        client.handshake();
         
         runner = new DeltaRunner(60, new Runnable() {
             public void run() {
@@ -106,7 +123,9 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 update(delta);
             }
         });
+        runner.start();
         
+        stayAlive = true;
         keepAlive = new Thread(new Runnable() {
             public void run() {
                 while (stayAlive) {
@@ -121,6 +140,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 }
             }
         });
+        keepAlive.start();
         
         shutdownHook = new Thread(){
             @Override
@@ -130,27 +150,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 ));
             }
         };
-    }
-    
-    @Override
-    public void sceneWillAppear() {
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    client.run();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        }).start();
-        
-        System.out.println("handshaking with server...");
-        client.handshake();
-        
-        runner.start();
-        stayAlive = true;
-        keepAlive.start();
         
         client.sendData(ImmutableMap.<String, Object>of(
             "type", "login",

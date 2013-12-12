@@ -16,7 +16,7 @@ import javax.swing.SwingUtilities;
 
 public class MenuScene extends ViewScene {
     
-    private final DeltaRunner runner;
+    private DeltaRunner runner;
     
     private PaddedView paddedView;
     private TextField ipAddressField;
@@ -44,7 +44,18 @@ public class MenuScene extends ViewScene {
         getView().addChild(paddedView);
         
         ipAddressField.requestFocus();
-        
+    }
+    
+    @Override
+    protected void paintComponent(Graphics g) {
+        paddedView.setWidth(getWidth());
+        paddedView.setHeight(getHeight());
+        super.paintComponent(g);
+    }
+    
+    @Override
+    public void sceneWillAppear() {
+        super.sceneWillAppear();
         runner = new DeltaRunner(30, new Runnable() {
             public void run() {
                 try {
@@ -60,18 +71,6 @@ public class MenuScene extends ViewScene {
                 }
             }
         }, DeltaRunnable.NULL);
-    }
-    
-    @Override
-    protected void paintComponent(Graphics g) {
-        paddedView.setWidth(getWidth());
-        paddedView.setHeight(getHeight());
-        super.paintComponent(g);
-    }
-    
-    @Override
-    public void sceneWillAppear() {
-        super.sceneWillAppear();
         runner.start();
     }
     

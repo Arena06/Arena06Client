@@ -42,9 +42,13 @@ public class ViewScene extends Scene implements MouseListener, KeyListener, KeyE
     public void  mouseClicked(MouseEvent e) { view.mouseClicked (e); }
     public void  mousePressed(MouseEvent e) { view.mousePressed (e); }
     public void mouseReleased(MouseEvent e) { view.mouseReleased(e); }
-    public void      keyTyped(KeyEvent   e) { view.keyTyped     (e); }
     public void    keyPressed(KeyEvent   e) { view.keyPressed   (e); }
     public void   keyReleased(KeyEvent   e) { view.keyReleased  (e); }
+    
+    public void keyTyped(KeyEvent e) {
+        if (e.getKeyChar() != KeyEvent.CHAR_UNDEFINED && Character.getType(e.getKeyChar()) != Character.CONTROL)
+            view.keyTyped(e);
+    }
     
     public void  mouseEntered(MouseEvent e) {}
     public void   mouseExited(MouseEvent e) {}

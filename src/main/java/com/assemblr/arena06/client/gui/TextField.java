@@ -48,11 +48,13 @@ public class TextField extends View {
     @Override
     public void keyTyped(KeyEvent ke) {
         char c = ke.getKeyChar();
-        if (c == '\u0008' /* BACKSPACE */) {
-            if (getText().length() > 0)
-                setText(getText().substring(0, getText().length() - 1));
-        } else {
+        if (c != KeyEvent.CHAR_UNDEFINED && Character.getType(c) != Character.CONTROL) {
             setText(getText() + c);
+        } else {
+            if (c == '\u0008' /* BACKSPACE */) {
+                if (getText().length() > 0)
+                    setText(getText().substring(0, getText().length() - 1));
+            }
         }
     }
     

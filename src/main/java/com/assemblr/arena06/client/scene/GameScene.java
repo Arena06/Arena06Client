@@ -1,15 +1,15 @@
-package com.assemblr.arena06.client.scenes;
+package com.assemblr.arena06.client.scene;
 
-import com.assemblr.arena06.client.navigation.NavigationController;
 import com.assemblr.arena06.common.data.Sprite;
 import com.assemblr.arena06.common.data.map.TileType;
 import com.assemblr.arena06.common.data.map.generators.MapGenerator;
 import com.assemblr.arena06.common.data.map.generators.RoomGenerator;
 import com.assemblr.arena06.common.data.Player;
 import com.assemblr.arena06.client.net.PacketClient;
+import com.assemblr.arena06.client.utils.DeltaRunnable;
+import com.assemblr.arena06.client.utils.DeltaRunner;
 import com.assemblr.arena06.common.data.Bullet;
 import com.assemblr.arena06.common.data.UpdateableSprite;
-import com.assemblr.arena06.common.data.weapon.Weapon;
 import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableList;
@@ -32,7 +32,6 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,7 +44,7 @@ import javax.swing.SwingUtilities;
 import org.javatuples.Pair;
 
 
-public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener, MouseListener, MouseWheelListener {
+public class GameScene extends Scene implements KeyEventDispatcher, KeyListener, MouseListener, MouseWheelListener {
     
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
@@ -55,9 +54,8 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     
     private final PacketClient client;
     
-    private Thread runner;
+    private final DeltaRunner runner;
     private Thread keepAlive;
-    private boolean running = false;
     private boolean stayAlive = false;
     
     private Thread shutdownHook;
@@ -79,10 +77,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     private Set<Integer> keysDown = new HashSet<Integer>();
     private boolean mouseDown;
     
-    private final NavigationController navigationControler;
-    
-    public GamePanel(String ipAddress, int port, String username, NavigationController navigationControler) {
-        this.navigationControler = navigationControler;
+    public GameScene(String ipAddress, int port, String username) {
         InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
         System.out.println("connecting to server at " + serverAddress);
         client = new PacketClient(serverAddress);
@@ -92,36 +87,23 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         addMouseListener(this);
         addMouseWheelListener(this);
         
-        runner = new Thread(new Runnable() {
+        runner = new DeltaRunner(60, new Runnable() {
             public void run() {
-                long lastUpdate = System.currentTimeMillis();
-                while (running) {
-                    try {
-                        SwingUtilities.invokeAndWait(new Runnable() {
-                            public void run() {
-                                //repaint();
-                                paintImmediately(0, 0, getWidth(), getHeight());
-                            }
-                        });
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    } catch (InvocationTargetException ex) {
-                        ex.printStackTrace();
-                    }
-                    
-                    long elapsed = System.currentTimeMillis() - lastUpdate;
-                    if (elapsed < 16) { // 60 FPS
-                        try {
-                            Thread.sleep(16 - elapsed);
-                        } catch (InterruptedException ex) {
-                            ex.printStackTrace();
+                try {
+                    SwingUtilities.invokeAndWait(new Runnable() {
+                        public void run() {
+                            paintImmediately(0, 0, getWidth(), getHeight());
                         }
-                    }
-                    
-                    long now = System.currentTimeMillis();
-                    update((now - lastUpdate) / 1000.0);
-                    lastUpdate = now;
+                    });
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                } catch (InvocationTargetException ex) {
+                    ex.printStackTrace();
                 }
+            }
+        }, new DeltaRunnable() {
+            public void run(double delta) {
+                update(delta);
             }
         });
         
@@ -140,7 +122,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
             }
         });
         
-         shutdownHook = new Thread(){
+        shutdownHook = new Thread(){
             @Override
             public void run() {
                 client.sendDataBlocking(ImmutableMap.<String, Object>of(
@@ -150,7 +132,8 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         };
     }
     
-    public void enteringView() {
+    @Override
+    public void sceneWillAppear() {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         new Thread(new Runnable() {
             public void run() {
@@ -165,7 +148,6 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         System.out.println("handshaking with server...");
         client.handshake();
         
-        running = true;
         runner.start();
         stayAlive = true;
         keepAlive.start();
@@ -179,8 +161,9 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
     
-    public void leavingView() {
-        running = false;
+    @Override
+    public void sceneWillDisappear() {
+        runner.requestStop();
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
     }
     
@@ -537,7 +520,7 @@ public class GamePanel extends Panel implements KeyEventDispatcher, KeyListener,
     public void keyPressed(KeyEvent ke) {
         if (ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
             System.out.println("disconnection from server");
-            navigationControler.popPanel();
+            getNavigationController().popScene();
         }
         if (ke.getKeyChar() == 'e' || ke.getKeyChar() == 'E') {
             player.incrementWeaponIndex(1);

@@ -1,23 +1,22 @@
 package com.assemblr.arena06.client;
 
-import com.assemblr.arena06.client.navigation.NavigationController;
-import com.assemblr.arena06.client.scenes.GamePanel;
-import com.assemblr.arena06.client.scenes.MenuPanel;
-import com.assemblr.arena06.client.scenes.Panel;
+import com.assemblr.arena06.client.scene.GameScene;
+import com.assemblr.arena06.client.scene.MenuScene;
+import com.assemblr.arena06.client.scene.NavigationController;
+import com.assemblr.arena06.client.scene.Scene;
+import java.util.Deque;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 import javax.swing.JFrame;
 
 public class ShotMain extends JFrame implements NavigationController {
-
-    private LinkedList<Panel> panels = new LinkedList<Panel>();
+    
     private static ShotMain main;
-
+    
     public static void main(String[] args) {
         String ipAddress = "localhost";
         int port = 30155;
         String username = "Player";
-
+        
         for (String arg : args) {
             String[] flag = arg.split("=", 2);
             if (flag.length != 2) {
@@ -36,52 +35,75 @@ public class ShotMain extends JFrame implements NavigationController {
                 username = flag[1];
             }
         }
-
+        
         main = new ShotMain();
-        
-        
         main.setTitle("Arena 06");
         main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         if (args.length > 1)
-            main.pushPanel(new GamePanel(ipAddress, port, username, main));
+            main.pushScene(new GameScene(ipAddress, port, username));
         else
-            main.pushPanel(new MenuPanel(main));
+            main.pushScene(new MenuScene());
         main.pack();
         main.setSize(700, 700);
         main.setVisible(true);
-
-   }
-
-    public void pushPanel(Panel panel) {
-        try {
-            panels.getLast().leavingView();
-            main.remove(panels.getLast());
-            
-        } catch (NoSuchElementException ec) {}
-        panel.enteringView();
-        main.add(panel);
+    }
+    
+    private final Deque<Scene> scenes = new LinkedList<Scene>();
+    
+    public void pushScene(Scene scene) {
+        Scene old = scenes.peek();
+        scenes.push(scene);
         
-        panels.add(panel);
-        panel.revalidate();
-
+        scene.setNavigationController(this);
+        if (old != null)
+            old.sceneWillDisappear();
+        scene.sceneWillAppear();
+        
+        if (old != null)
+            remove(old);
+        add(scene);
+        revalidate();
+        
+        if (old != null)
+            old.sceneDidDisappear();
+        scene.sceneDidAppear();
     }
-
-    public void popPanel() {
-        panels.getLast().leavingView();
-        panels.getLast().dispose();
-        main.remove(panels.getLast());
-        panels.removeLast();
-        try {
-            panels.getLast().enteringView();
-            main.add(panels.getLast());
-            
-            panels.getLast().revalidate();
-        } catch (NoSuchElementException ec) {}
+    
+    public Scene popScene() {
+        Scene old = scenes.pop();
+        Scene scene = scenes.peek();
+        
+        old.sceneWillDisappear();
+        scene.sceneWillAppear();
+        
+        remove(old);
+        add(scene);
+        revalidate();
+        
+        old.sceneDidDisappear();
+        scene.sceneDidAppear();
+        old.setNavigationController(null);
+        
+        return old;
     }
-
-    public void swapCurrentPanel(Panel newPanel) {
-        popPanel();
-        pushPanel(newPanel);
+    
+    public Scene replaceScene(Scene scene) {
+        Scene old = scenes.pop();
+        scenes.push(scene);
+        
+        scene.setNavigationController(this);
+        old.sceneWillDisappear();
+        scene.sceneWillAppear();
+        
+        remove(old);
+        add(scene);
+        revalidate();
+        
+        old.sceneDidDisappear();
+        scene.sceneDidAppear();
+        old.setNavigationController(null);
+        
+        return old;
     }
-
+    
 }

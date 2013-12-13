@@ -7,16 +7,12 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.ClipboardOwner;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
 
 
-public class TextField extends View implements ClipboardOwner  {
+public class TextField extends View {
     
     private static final int TEXT_PADDING = 10;
     
@@ -85,7 +81,4 @@ public class TextField extends View implements ClipboardOwner  {
     public void setText(String text) {
         this.text = text;
     }
-
-    public void lostOwnership(Clipboard clipboard, Transferable contents) {}
-    
 }

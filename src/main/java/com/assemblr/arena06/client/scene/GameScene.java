@@ -285,6 +285,11 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                         }
                     } else {
                         player.updateState((Map<String, Object>) packet.get("data"));
+                        client.sendData(ImmutableMap.<String, Object>of(
+                                "type", "sprite",
+                                "action", "validate",
+                                "id", playerId
+                        ));
                     }
                 }
             } else if (packet.get("type").equals("chat")) {
@@ -317,6 +322,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         if (mouseDown && player.isAlive() && !player.isReloading() && player.cooldownRemaining() == 0 && player.getWeapon().isFullAuto() && !player.getWeaponData().isOutOfAmo()) {
             shoot(new Point(MouseInfo.getPointerInfo().getLocation().x - getLocationOnScreen().x, MouseInfo.getPointerInfo().getLocation().y - getLocationOnScreen().y));
         } 
+        Vector2D oldVelocity = new Vector2D(getVelocity());
         Vector2D acceleration = new Vector2D();
         
         if (!chatting) {
@@ -331,30 +337,30 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 acceleration.y = INPUT_ACCELERATION * yInput / Math.sqrt(2);
             }
         }
+        getVelocity().add(Vector2D.multiply(acceleration, delta));
         
-        velocity.add(Vector2D.multiply(acceleration, delta));
-        if (Vector2D.length(velocity) > 0) {
-            Vector2D friction = Vector2D.scale(velocity, FRICTION_ACCELERATION);
-            velocity.subtract(Vector2D.multiply(friction, delta).clamp(Vector2D.length(velocity)));
+        if (Vector2D.length(getVelocity()) > 0) {
+            Vector2D friction = Vector2D.scale(getVelocity(), FRICTION_ACCELERATION);
+            getVelocity().subtract(Vector2D.multiply(friction, delta).clamp(Vector2D.length(getVelocity())));
         }
-        velocity.clamp(MAXIMUM_VELOCITY);
+        getVelocity().clamp(MAXIMUM_VELOCITY);
         
-        if (Math.abs(velocity.x) < 0.001) velocity.x = 0;
-        if (Math.abs(velocity.y) < 0.001) velocity.y = 0;
+        if (Math.abs(getVelocity().x) < 0.001) getVelocity().x = 0;
+        if (Math.abs(getVelocity().y) < 0.001) getVelocity().y = 0;
         
         // perform collision detection
-        double xNew = player.getX() + velocity.x * delta;
-        double yNew = player.getY() + velocity.y * delta;
+        double xNew = player.getX() + getVelocity().x * delta;
+        double yNew = player.getY() + getVelocity().y * delta;
         
         if (player.isAlive()) {
-            if (velocity.x < 0) {
+            if (getVelocity().x < 0) {
                 int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
                 for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
                     }
                 }
-            } else if (velocity.x > 0) {
+            } else if (getVelocity().x > 0) {
                 int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
                 for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
                     if (map[xTile][yTile].isSolid()) {
@@ -363,14 +369,14 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 }
             }
 
-            if (velocity.y < 0) {
+            if (getVelocity().y < 0) {
                 int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
                 for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
                     }
                 }
-            } else if (velocity.y > 0) {
+            } else if (getVelocity().y > 0) {
                 int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
                 for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
                     if (map[xTile][yTile].isSolid()) {
@@ -383,8 +389,8 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         double yOld = player.getY();
         player.setX(xNew);
         player.setY(yNew);
-        
-        if (playerId != 0 && (xOld != xNew || yOld != yNew || playerNeedsUpdate)) {
+        player.setVelocity(getVelocity());
+        if (playerId != 0 && (xOld + delta * oldVelocity.x != xNew || yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate || !oldVelocity.equals(getVelocity()))) {
             client.sendData(ImmutableMap.<String, Object>of(
                 "type", "sprite",
                 "action", "update",
@@ -608,6 +614,14 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     public void mouseWheelMoved(MouseWheelEvent e) {
         System.out.println(e.getClickCount());
         player.incrementWeaponIndex(e.getClickCount());
+    }
+
+    public Vector2D getVelocity() {
+        return velocity;
+    }
+
+    public void setVelocity(Vector2D velocity) {
+       this.velocity = velocity;
     }
     
 }

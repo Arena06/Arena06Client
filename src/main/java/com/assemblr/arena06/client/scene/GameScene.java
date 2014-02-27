@@ -390,7 +390,8 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         player.setX(xNew);
         player.setY(yNew);
         player.setVelocity(getVelocity());
-        if (playerId != 0 && (xOld + delta * oldVelocity.x != xNew || yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate || !oldVelocity.equals(getVelocity()))) {
+        //if (playerId != 0 && (xOld + delta * oldVelocity.x != xNew || yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate || !oldVelocity.equals(getVelocity()))) {
+        if (playerId != 0) {
             client.sendData(ImmutableMap.<String, Object>of(
                 "type", "sprite",
                 "action", "update",

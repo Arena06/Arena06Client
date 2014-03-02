@@ -5,16 +5,15 @@ import com.assemblr.arena06.common.net.DataDecoder;
 import com.assemblr.arena06.common.net.DataEncoder;
 import com.assemblr.arena06.common.net.PacketDecoder;
 import com.assemblr.arena06.common.net.PacketEncoder;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Queue;
@@ -37,11 +36,6 @@ public class PacketClient {
             }
         });
         clientThread.start();
-        client.sendData(ImmutableMap.<String, Object>of(
-                "a", "b",
-                "foo", ImmutableMap.<String, Object>of(
-                    "bar", ImmutableList.<Object>of(1, 2, 3)
-                )));
     }
     
     private final InetSocketAddress address;
@@ -60,11 +54,11 @@ public class PacketClient {
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)
-             .channel(NioDatagramChannel.class)
-             .option(ChannelOption.SO_BROADCAST, true)
-             .handler(new ChannelInitializer<DatagramChannel>() {
+             .channel(NioSocketChannel.class)
+             //.option(ChannelOption.SO_BROADCAST, true)
+             .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(DatagramChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
                             new PacketEncoder(), new DataEncoder(),
                             new PacketDecoder(), new DataDecoder(),
@@ -72,7 +66,7 @@ public class PacketClient {
                 }
             });
             
-            channel = b.bind(0).sync().channel();
+            channel = b.connect(address).channel();
             channel.closeFuture().await();
         } finally {
             group.shutdownGracefully();
@@ -100,7 +94,14 @@ public class PacketClient {
             readLock.unlock();
         }
     }
-    
+    public void writeStringToChannel(String s) {
+        ByteBuf b = channel.alloc().buffer(s.length());
+        for (int i = 0; i < s.toCharArray().length; i++) {
+            b.writeByte(s.toCharArray()[i]);
+        }
+        
+        channel.writeAndFlush(b);
+    }
     public void sendData(Map<String, Object> data) {
         while (channel == null) {
             try {

@@ -150,17 +150,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     private void generateMap(long seed) {
         map = mapGenerator.generateMap(seed);
         paintMap();
-        
-        while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
-            player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
-        }
-        
-        client.sendData(ImmutableMap.<String, Object>of(
-            "type", "sprite",
-            "action", "update",
-            "id", playerId,
-            "data", player.serializeState()
-        ));
     }
     
     private void paintMap() {
@@ -192,6 +181,15 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 player.updateState((Map<String, Object>) packet.get("data"));
                 playerId = (Integer) packet.get("id");
                 generateMap((Long) packet.get("map-seed"));
+                while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
+                    player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
+                }
+                client.sendData(ImmutableMap.<String, Object>of(
+                        "type", "sprite",
+                        "action", "update",
+                        "id", playerId,
+                        "data", player.serializeState()
+                ));
                 requestSpriteList();
                 System.out.println("logged in as " + player.getName());
             } else if (packet.get("type").equals("request")) {
@@ -232,7 +230,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             } else if (packet.get("type").equals("map")) {
                 if (packet.get("action").equals("load")) {
                     generateMap((Long) packet.get("seed"));
-                    requestSpriteList();
                 }
             } else if (packet.get("type").equals("sprite")) {
                 if (packet.get("action").equals("create")) {

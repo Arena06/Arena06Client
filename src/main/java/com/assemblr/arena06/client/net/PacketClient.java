@@ -78,6 +78,7 @@ public class PacketClient {
         boolean success = false;
         readLock.lock();
         try {
+            long startTime = System.currentTimeMillis();
             while (!success) {
                 sendData(ImmutableMap.<String, Object>of(
                     "type", "handshake"
@@ -86,6 +87,9 @@ public class PacketClient {
                     success = readCondition.await(1000, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
+                }
+                if (System.currentTimeMillis() - startTime > 10000) {
+                    System.exit(0);
                 }
             }
             incomingPackets.clear();

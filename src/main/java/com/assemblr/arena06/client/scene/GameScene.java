@@ -55,8 +55,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     private final PacketClient client;
     
     private DeltaRunner runner;
-    private Thread keepAlive;
-    private boolean stayAlive = false;
     
     private Thread shutdownHook;
     
@@ -124,23 +122,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             }
         });
         runner.start();
-        
-        stayAlive = true;
-        keepAlive = new Thread(new Runnable() {
-            public void run() {
-                while (stayAlive) {
-                    client.sendData(ImmutableMap.<String, Object>of(
-                        "type", "keep-alive"
-                    ));
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            }
-        });
-        keepAlive.start();
         
         shutdownHook = new Thread(){
             @Override
@@ -565,7 +546,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
 
     @Override
     public void dispose() {
-        stayAlive = false;
         client.sendDataBlocking(ImmutableMap.<String, Object>of(
                     "type", "logout"
         ));

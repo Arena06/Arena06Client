@@ -1,15 +1,14 @@
 package com.assemblr.arena06.client.net;
 
-import com.assemblr.arena06.common.net.AddressedData;
-import com.assemblr.arena06.common.net.DataDecoder;
-import com.assemblr.arena06.common.net.DataEncoder;
 import com.assemblr.arena06.common.net.PacketDecoder;
 import com.assemblr.arena06.common.net.PacketEncoder;
+import com.assemblr.arena06.common.packet.Packet01JSON;
 import com.google.common.collect.ImmutableMap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -57,13 +56,13 @@ public class PacketClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
              .channel(NioSocketChannel.class)
-             //.option(ChannelOption.SO_BROADCAST, true)
+             .option(ChannelOption.SO_KEEPALIVE, true)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
-                            new LengthFieldPrepender(2),                          new PacketEncoder(), new DataEncoder(),
-                            new LengthFieldBasedFrameDecoder(0xFFFF, 0, 2, 0, 2), new PacketDecoder(), new DataDecoder(),
+                            new LengthFieldPrepender(2),                          new PacketEncoder(),
+                            new LengthFieldBasedFrameDecoder(0xFFFF, 0, 2, 0, 2), new PacketDecoder(),
                             new PacketClientHandler(readLock, readCondition, incomingPackets));
                 }
             });
@@ -112,7 +111,7 @@ public class PacketClient {
                 ex.printStackTrace();
             }
         }
-        channel.writeAndFlush(new AddressedData(data, null, address));
+        channel.writeAndFlush(new Packet01JSON(data));
     }
     
     public void sendDataBlocking(Map<String, Object> data) {
@@ -123,7 +122,7 @@ public class PacketClient {
                 ex.printStackTrace();
             }
         }
-        channel.writeAndFlush(new AddressedData(data, null, address)).awaitUninterruptibly();
+        channel.writeAndFlush(new Packet01JSON(data)).awaitUninterruptibly();
     }
     
     public Queue<Map<String, Object>> getIncomingPackets() {

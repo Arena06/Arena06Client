@@ -14,6 +14,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Queue;
@@ -60,8 +62,8 @@ public class PacketClient {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
-                            new PacketEncoder(), new DataEncoder(),
-                            new PacketDecoder(), new DataDecoder(),
+                            new LengthFieldPrepender(2),                          new PacketEncoder(), new DataEncoder(),
+                            new LengthFieldBasedFrameDecoder(0xFFFF, 0, 2, 0, 2), new PacketDecoder(), new DataDecoder(),
                             new PacketClientHandler(readLock, readCondition, incomingPackets));
                 }
             });

@@ -329,6 +329,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         if (Math.abs(getVelocity().x) < 0.001) getVelocity().x = 0;
         if (Math.abs(getVelocity().y) < 0.001) getVelocity().y = 0;
         
+        
         // perform collision detection
         double xNew = player.getX() + getVelocity().x * delta;
         double yNew = player.getY() + getVelocity().y * delta;
@@ -339,6 +340,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
+                        getVelocity().x = 0;
                     }
                 }
             } else if (getVelocity().x > 0) {
@@ -346,6 +348,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
+                        getVelocity().x = 0;
                     }
                 }
             }
@@ -355,6 +358,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
+                        getVelocity().y = 0;
                     }
                 }
             } else if (getVelocity().y > 0) {
@@ -362,6 +366,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
                     if (map[xTile][yTile].isSolid()) {
                         yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
+                        getVelocity().y = 0;
                     }
                 }
             }

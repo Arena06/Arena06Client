@@ -14,6 +14,7 @@ import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -32,6 +33,7 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -452,7 +454,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
             }
             for (Pair<Date, String> chat : chats.descendingSet()) {
-                for (String line : chat.getValue1().trim().split("\n")) {
+                for (String line : Lists.reverse(Arrays.asList(chat.getValue1().trim().split("\n")))) {
                     g.setColor(new Color(0x88000000, true));
                     g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
                     g.setColor(Color.WHITE);
@@ -476,7 +478,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 double opacity = 1.0 - (System.currentTimeMillis() - chat.getValue0().getTime() - 5000.0) / 1000.0;
                 if (opacity < 0) break;
                 if (opacity > 1) opacity = 1;
-                for (String line : chat.getValue1().trim().split("\n")) {
+                for (String line : Lists.reverse(Arrays.asList(chat.getValue1().trim().split("\n")))) {
                     g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * opacity)));
                     g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
                     g.setColor(new Color(1f, 1f, 1f, (float) opacity));

@@ -332,40 +332,58 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         // perform collision detection
         double xNew = player.getX() + getVelocity().x * delta;
         double yNew = player.getY() + getVelocity().y * delta;
-        
-        if (player.isAlive()) {
-            if (getVelocity().x < 0) {
-                int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
-                for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
-                    if (map[xTile][yTile].isSolid()) {
-                        xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
-                        getVelocity().x = 0;
-                    }
-                }
-            } else if (getVelocity().x > 0) {
-                int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
-                for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
-                    if (map[xTile][yTile].isSolid()) {
-                        xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
-                        getVelocity().x = 0;
-                    }
-                }
+        if (map != null) {
+            if (xNew < 0) {
+                xNew = 0;
+                getVelocity().x = 0;
+            }
+            if (xNew > MapGenerator.TILE_SIZE * map.length) {
+                xNew = MapGenerator.TILE_SIZE * map.length;
+                getVelocity().x = 0;
+            }
+            if (yNew < 0) {
+                yNew = 0;
+                getVelocity().y = 0;
+            }
+            if (yNew > MapGenerator.TILE_SIZE * map[0].length) {
+                yNew = MapGenerator.TILE_SIZE * map.length;
+                getVelocity().y = 0;
             }
 
-            if (getVelocity().y < 0) {
-                int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
-                for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
-                    if (map[xTile][yTile].isSolid()) {
-                        yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
-                        getVelocity().y = 0;
+            if (player.isAlive()) {
+                if (getVelocity().x < 0) {
+                    int xTile = (int) (xNew / MapGenerator.TILE_SIZE);
+                    for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                        if (map[xTile][yTile].isSolid()) {
+                            xNew = (xTile + 1) * MapGenerator.TILE_SIZE;
+                            getVelocity().x = 0;
+                        }
+                    }
+                } else if (getVelocity().x > 0) {
+                    int xTile = (int) ((xNew + player.getWidth()) / MapGenerator.TILE_SIZE);
+                    for (int yTile = player.getTileY(); yTile <= (int) ((player.getY() + player.getHeight()) / MapGenerator.TILE_SIZE); yTile++) {
+                        if (map[xTile][yTile].isSolid()) {
+                            xNew = xTile * MapGenerator.TILE_SIZE - player.getWidth() - 0.01;
+                            getVelocity().x = 0;
+                        }
                     }
                 }
-            } else if (getVelocity().y > 0) {
-                int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
-                for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
-                    if (map[xTile][yTile].isSolid()) {
-                        yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
-                        getVelocity().y = 0;
+
+                if (getVelocity().y < 0) {
+                    int yTile = (int) (yNew / MapGenerator.TILE_SIZE);
+                    for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                        if (map[xTile][yTile].isSolid()) {
+                            yNew = (yTile + 1) * MapGenerator.TILE_SIZE;
+                            getVelocity().y = 0;
+                        }
+                    }
+                } else if (getVelocity().y > 0) {
+                    int yTile = (int) ((yNew + player.getHeight()) / MapGenerator.TILE_SIZE);
+                    for (int xTile = player.getTileX(); xTile <= (int) ((player.getX() + player.getWidth()) / MapGenerator.TILE_SIZE); xTile++) {
+                        if (map[xTile][yTile].isSolid()) {
+                            yNew = yTile * MapGenerator.TILE_SIZE - player.getHeight() - 0.01;
+                            getVelocity().y = 0;
+                        }
                     }
                 }
             }

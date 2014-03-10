@@ -45,21 +45,20 @@ import java.util.TreeSet;
 import javax.swing.SwingUtilities;
 import org.javatuples.Pair;
 
-
 public class GameScene extends Scene implements KeyEventDispatcher, KeyListener, MouseListener, MouseWheelListener {
-    
+
     private static final double INPUT_ACCELERATION = 4000;
     private static final double FRICTION_ACCELERATION = 2000;
     private static final double MAXIMUM_VELOCITY = 400;
-    
+
     private final Random random = new Random();
-    
+
     private final PacketClient client;
-    
+
     private DeltaRunner runner;
-    
+
     private Thread shutdownHook;
-    
+
     private int playerId = 0;
     private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
@@ -67,16 +66,16 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     private MapGenerator mapGenerator = new RoomGenerator();
     private TileType[][] map;
     private BufferedImage mapBuffer;
-    
+
     private boolean chatting = false;
     private StringBuilder currentChat = new StringBuilder();
     private TreeSet<Pair<Date, String>> chats = new TreeSet<Pair<Date, String>>();
-    
+
     private Vector2D velocity = new Vector2D();
-    
+
     private Set<Integer> keysDown = new HashSet<Integer>();
     private boolean mouseDown;
-    
+
     public GameScene(String ipAddress, int port, String username) {
         InetSocketAddress serverAddress = new InetSocketAddress(ipAddress, port);
         System.out.println("connecting to server at " + serverAddress);
@@ -87,7 +86,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         addMouseListener(this);
         addMouseWheelListener(this);
     }
-    
+
     @Override
     public void sceneWillAppear() {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
@@ -100,10 +99,10 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 }
             }
         }).start();
-        
+
         System.out.println("handshaking with server...");
         client.handshake();
-        
+
         runner = new DeltaRunner(60, new Runnable() {
             public void run() {
                 try {
@@ -124,57 +123,59 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             }
         });
         runner.start();
-        
-        shutdownHook = new Thread(){
+
+        shutdownHook = new Thread() {
             @Override
             public void run() {
                 client.sendDataBlocking(ImmutableMap.<String, Object>of(
-                    "type", "logout"
+                        "type", "logout"
                 ));
             }
         };
-        
+
         client.sendData(ImmutableMap.<String, Object>of(
-            "type", "login",
-            "data", player.serializeState()
+                "type", "login",
+                "data", player.serializeState()
         ));
         System.out.println("logging in...");
-        
+
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
-    
+
     @Override
     public void sceneWillDisappear() {
         runner.requestStop();
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
     }
-    
+
     private void generateMap(long seed) {
         map = mapGenerator.generateMap(seed);
         paintMap();
     }
-    
+
     private void paintMap() {
         mapBuffer = getGraphicsConfiguration().createCompatibleImage(map.length * (int) MapGenerator.TILE_SIZE, (map.length == 0 ? 0 : map[0].length) * (int) MapGenerator.TILE_SIZE);
         Graphics2D g = mapBuffer.createGraphics();
         for (int x = 0; x < map.length; x++) {
             for (int y = 0; y < map[x].length; y++) {
-                if (map[x][y] == TileType.NONE) continue;
+                if (map[x][y] == TileType.NONE) {
+                    continue;
+                }
                 switch (map[x][y]) {
-                case FLOOR:
-                case DOOR:
-                    g.setColor(Color.LIGHT_GRAY);
-                    break;
-                case WALL:
-                    g.setColor(Color.DARK_GRAY);
-                    break;
+                    case FLOOR:
+                    case DOOR:
+                        g.setColor(Color.LIGHT_GRAY);
+                        break;
+                    case WALL:
+                        g.setColor(Color.DARK_GRAY);
+                        break;
                 }
                 g.fillRect(x * (int) MapGenerator.TILE_SIZE, y * (int) MapGenerator.TILE_SIZE, (int) MapGenerator.TILE_SIZE, (int) MapGenerator.TILE_SIZE);
             }
         }
         g.dispose();
     }
-    
+
     private void update(double delta) {
         // process inbound packets
         Map<String, Object> packet;
@@ -183,15 +184,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 player.updateState((Map<String, Object>) packet.get("data"));
                 playerId = (Integer) packet.get("id");
                 generateMap((Long) packet.get("map-seed"));
-                while (map[(int) Math.round(player.getPosition().x / MapGenerator.TILE_SIZE)][(int) Math.round(player.getPosition().y / MapGenerator.TILE_SIZE)] != TileType.FLOOR) {
-                    player.setPosition(new Point2D.Double(random.nextInt(map.length) * MapGenerator.TILE_SIZE, random.nextInt(map[0].length) * MapGenerator.TILE_SIZE));
-                }
-                client.sendData(ImmutableMap.<String, Object>of(
-                        "type", "sprite",
-                        "action", "update",
-                        "id", playerId,
-                        "data", player.serializeState()
-                ));
                 requestSpriteList();
                 System.out.println("logged in as " + player.getName());
             } else if (packet.get("type").equals("request")) {
@@ -206,7 +198,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                             player = new Player(true, player.getName());
                             player.updateState((Map<String, Object>) spriteData.get(1));
                             client.sendData(
-                            ImmutableMap.<String, Object>of(
+                                    ImmutableMap.<String, Object>of(
                                             "type", "sprite",
                                             "action", "validate",
                                             "id", playerId
@@ -214,7 +206,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                             );
                             continue;
                         }
-                        
+
                         try {
                             Class<? extends Sprite> spriteClass = (Class<? extends Sprite>) Class.forName((String) spriteData.get(0));
                             Sprite sprite = spriteClass.newInstance();
@@ -251,7 +243,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 } else if (packet.get("action").equals("remove")) {
                     int spriteId = (Integer) packet.get("id");
                     sprites.remove(spriteId);
-                    if (updateableSprites.containsKey(spriteId)){
+                    if (updateableSprites.containsKey(spriteId)) {
                         updateableSprites.remove(spriteId);
                     }
                 } else if (packet.get("action").equals("update")) {
@@ -278,12 +270,12 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 chats.add(new Pair<Date, String>(new Date(timestamp), content));
             }
         }
-        
+
         boolean playerNeedsUpdate = false;
         for (Map.Entry<Integer, UpdateableSprite> updateableSprite : updateableSprites.entrySet()) {
             updateableSprite.getValue().update(delta);
         }
-        
+
         if (player.cooldownRemaining() != 0) {
             player.setCooldownRemaining(player.cooldownRemaining() - delta);
             if (player.cooldownRemaining() < 0) {
@@ -301,14 +293,14 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         }
         if (mouseDown && player.isAlive() && !player.isReloading() && player.cooldownRemaining() == 0 && player.getWeapon().isFullAuto() && !player.getWeaponData().isOutOfAmo()) {
             shoot(new Point(MouseInfo.getPointerInfo().getLocation().x - getLocationOnScreen().x, MouseInfo.getPointerInfo().getLocation().y - getLocationOnScreen().y));
-        } 
+        }
         Vector2D oldVelocity = new Vector2D(getVelocity());
         Vector2D acceleration = new Vector2D();
-        
+
         if (!chatting) {
             int xInput = (keysDown.contains(KeyEvent.VK_A) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_D) ? 1 : 0);
             int yInput = (keysDown.contains(KeyEvent.VK_W) ? -1 : 0) + (keysDown.contains(KeyEvent.VK_S) ? 1 : 0);
-            
+
             if (xInput == 0 || yInput == 0) {
                 acceleration.x = INPUT_ACCELERATION * xInput;
                 acceleration.y = INPUT_ACCELERATION * yInput;
@@ -318,17 +310,20 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             }
         }
         getVelocity().add(Vector2D.multiply(acceleration, delta));
-        
+
         if (Vector2D.length(getVelocity()) > 0) {
             Vector2D friction = Vector2D.scale(getVelocity(), FRICTION_ACCELERATION);
             getVelocity().subtract(Vector2D.multiply(friction, delta).clamp(Vector2D.length(getVelocity())));
         }
         getVelocity().clamp(MAXIMUM_VELOCITY);
-        
-        if (Math.abs(getVelocity().x) < 0.001) getVelocity().x = 0;
-        if (Math.abs(getVelocity().y) < 0.001) getVelocity().y = 0;
-        
-        
+
+        if (Math.abs(getVelocity().x) < 0.001) {
+            getVelocity().x = 0;
+        }
+        if (Math.abs(getVelocity().y) < 0.001) {
+            getVelocity().y = 0;
+        }
+
         // perform collision detection
         double xNew = player.getX() + getVelocity().x * delta;
         double yNew = player.getY() + getVelocity().y * delta;
@@ -396,51 +391,54 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         //if (playerId != 0 && (xOld + delta * oldVelocity.x != xNew || yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate || !oldVelocity.equals(getVelocity()))) {
         if (playerId != 0) {
             client.sendData(ImmutableMap.<String, Object>of(
-                "type", "sprite",
-                "action", "update",
-                "id", playerId,
-                "data", player.serializeState()
+                    "type", "sprite",
+                    "action", "update",
+                    "id", playerId,
+                    "data", player.serializeState()
             ));
         }
     }
-    
+
     private boolean requestingSpriteList = false;
+
     private synchronized void requestSpriteList() {
-        if (requestingSpriteList) return;
+        if (requestingSpriteList) {
+            return;
+        }
         requestingSpriteList = true;
         client.sendData(ImmutableMap.<String, Object>of(
-            "type", "request",
-            "request", "sprite-list"
+                "type", "request",
+                "request", "sprite-list"
         ));
     }
-    
+
     @Override
     protected void paintComponent(Graphics graphics) {
         Graphics2D g = (Graphics2D) graphics;
-        
+
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), getHeight());
-        
+
         // translate camera
         g.translate((getWidth() - player.getWidth()) / 2.0 - player.getX(), (getHeight() - player.getHeight()) / 2.0 - player.getY());
-        
+
         // draw map
         g.drawImage(mapBuffer, 0, 0, null);
-        
+
         for (Sprite sprite : sprites.values()) {
             g.translate(sprite.getX(), sprite.getY());
             sprite.render(g);
             g.translate(-sprite.getX(), -sprite.getY());
         }
-        
+
         // render player separately
         g.translate(player.getX(), player.getY());
         player.render(g);
         g.translate(-player.getX(), -player.getY());
-        
+
         // untranslate camera
         g.translate(-((getWidth() - player.getWidth()) / 2.0 - player.getX()), -((getHeight() - player.getHeight()) / 2.0 - player.getY()));
-        
+
         // draw weapon info
         if (player.isAlive()) {
             g.setColor(Color.red);
@@ -454,10 +452,10 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             } else {
                 g.fillRect(this.getWidth() - 107, this.getHeight() - 17, (int) Math.round(101 * (double) player.getLoadedBullets() / (double) player.getWeapon().getMagSize()), 11);
             }
-            
+
             g.drawString("" + player.getWeaponData().getCartregesReamaining(), this.getWidth() - 150 - g.getFontMetrics().stringWidth(player.getWeapon().getName()), this.getHeight() - 10);
         }
-        
+
         // draw chat
         g.setFont(Fonts.FONT_PRIMARY.deriveFont(16f));
         if (chatting) {
@@ -465,7 +463,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             g.fillRect(10, getHeight() - 45, getWidth() - 20, 35);
             g.setColor(Color.WHITE);
             g.drawString(currentChat.toString() + "_", 20, getHeight() - 20);
-            
+
             int i = 1;
             if (!chats.isEmpty()) {
                 g.setColor(new Color(0x88000000, true));
@@ -486,16 +484,23 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             // draw bottom line for first line of chat
             if (!chats.isEmpty()) {
                 double firstOpacity = 1.0 - (System.currentTimeMillis() - chats.last().getValue0().getTime() - 5000.0) / 1000.0;
-                if (firstOpacity < 0) firstOpacity = 0;
-                else if (firstOpacity > 1) firstOpacity = 1;
+                if (firstOpacity < 0) {
+                    firstOpacity = 0;
+                } else if (firstOpacity > 1) {
+                    firstOpacity = 1;
+                }
                 g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * firstOpacity)));
                 g.fillRect(10, getHeight() - 65, getWidth() - 20, 10);
             }
             // draw top part of remaining lines
             for (Pair<Date, String> chat : chats.descendingSet()) {
                 double opacity = 1.0 - (System.currentTimeMillis() - chat.getValue0().getTime() - 5000.0) / 1000.0;
-                if (opacity < 0) break;
-                if (opacity > 1) opacity = 1;
+                if (opacity < 0) {
+                    break;
+                }
+                if (opacity > 1) {
+                    opacity = 1;
+                }
                 for (String line : Lists.reverse(Arrays.asList(chat.getValue1().trim().split("\n")))) {
                     g.setColor(new Color(0f, 0f, 0f, (float) (0.345 * opacity)));
                     g.fillRect(10, getHeight() - (i * 25 + 65), getWidth() - 20, 25);
@@ -505,27 +510,28 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 }
             }
         }
-        
+
     }
-    
+
     public boolean dispatchKeyEvent(KeyEvent ke) {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().redispatchEvent(this, ke);
         return true;
     }
-    
+
     public void keyTyped(KeyEvent ke) {
         if (chatting) {
             if (ke.getKeyChar() != KeyEvent.CHAR_UNDEFINED && Character.getType(ke.getKeyChar()) != Character.CONTROL) {
                 currentChat.append(ke.getKeyChar());
             } else {
                 if (ke.getKeyChar() == '\u0008') {
-                    if (currentChat.length() != 0)
+                    if (currentChat.length() != 0) {
                         currentChat.deleteCharAt(currentChat.length() - 1);
+                    }
                 }
             }
         }
     }
-    
+
     public void keyPressed(KeyEvent ke) {
         if (ke.getKeyCode() == KeyEvent.VK_ESCAPE) {
             System.out.println("disconnection from server");
@@ -536,9 +542,11 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         } else if (ke.getKeyChar() == 'q' || ke.getKeyChar() == 'Q') {
             player.incrementWeaponIndex(-1);
         }
-        if (keysDown.contains(ke.getKeyCode())) return;
+        if (keysDown.contains(ke.getKeyCode())) {
+            return;
+        }
         keysDown.add(ke.getKeyCode());
-        
+
         if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
             if (!chatting) {
                 chatting = true;
@@ -546,8 +554,8 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 String message = currentChat.toString().trim();
                 if (message.length() != 0) {
                     client.sendData(ImmutableMap.<String, Object>of(
-                        "type", "chat",
-                        "message", currentChat.toString()
+                            "type", "chat",
+                            "message", currentChat.toString()
                     ));
                 }
                 currentChat = new StringBuilder();
@@ -560,20 +568,22 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
             }
         }
     }
-    
+
     public void keyReleased(KeyEvent ke) {
-        if (!keysDown.contains(ke.getKeyCode())) return;
+        if (!keysDown.contains(ke.getKeyCode())) {
+            return;
+        }
         keysDown.remove(ke.getKeyCode());
     }
 
     @Override
     public void dispose() {
         client.sendDataBlocking(ImmutableMap.<String, Object>of(
-                    "type", "logout"
+                "type", "logout"
         ));
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
-    
+
     private void shoot(Point direction) {
         List<Bullet> bullets = player.getWeapon().getBulletFactory().getBullets();
         for (Bullet b : bullets) {
@@ -600,8 +610,9 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
 
     public void mousePressed(MouseEvent e) {
         mouseDown = true;
-        if (player.isAlive() && player.cooldownRemaining() == 0 && !player.isReloading() && !player.getWeaponData().isOutOfAmo())
+        if (player.isAlive() && player.cooldownRemaining() == 0 && !player.isReloading() && !player.getWeaponData().isOutOfAmo()) {
             shoot(e.getPoint());
+        }
     }
 
     public void mouseReleased(MouseEvent e) {
@@ -624,7 +635,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     }
 
     public void setVelocity(Vector2D velocity) {
-       this.velocity = velocity;
+        this.velocity = velocity;
     }
-    
+
 }

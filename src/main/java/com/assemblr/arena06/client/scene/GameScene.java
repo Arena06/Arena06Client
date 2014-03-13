@@ -10,6 +10,8 @@ import com.assemblr.arena06.client.utils.DeltaRunnable;
 import com.assemblr.arena06.client.utils.DeltaRunner;
 import com.assemblr.arena06.common.data.Bullet;
 import com.assemblr.arena06.common.data.UpdateableSprite;
+import com.assemblr.arena06.common.resource.ResourceBlock;
+import com.assemblr.arena06.common.resource.ResourceResolver;
 import com.assemblr.arena06.common.utils.Fonts;
 import com.assemblr.arena06.common.utils.Vector2D;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +33,7 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -42,6 +45,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import org.javatuples.Pair;
 
@@ -89,6 +94,11 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
 
     @Override
     public void sceneWillAppear() {
+        try {
+            ResourceResolver.getResourceResolver().loadResources(ResourceBlock.SPRITES);
+        } catch (IOException ex) {
+            Logger.getLogger(GameScene.class.getName()).log(Level.SEVERE, null, ex);
+        }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         new Thread(new Runnable() {
             public void run() {
@@ -581,6 +591,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         client.sendDataBlocking(ImmutableMap.<String, Object>of(
                 "type", "logout"
         ));
+        ResourceResolver.getResourceResolver().unloadResources(ResourceBlock.SPRITES);
         Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
 

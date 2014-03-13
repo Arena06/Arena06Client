@@ -1,9 +1,11 @@
 package com.assemblr.arena06.client;
 
+import com.assemblr.arena06.client.resource.PreloadedResourceResolver;
 import com.assemblr.arena06.client.scene.GameScene;
 import com.assemblr.arena06.client.scene.MenuScene;
 import com.assemblr.arena06.client.scene.NavigationController;
 import com.assemblr.arena06.client.scene.Scene;
+import com.assemblr.arena06.common.resource.ResourceResolver;
 import java.util.Deque;
 import java.util.LinkedList;
 import javax.swing.JFrame;
@@ -35,6 +37,8 @@ public class ShotMain extends JFrame implements NavigationController {
                 username = flag[1];
             }
         }
+        
+        ResourceResolver.setResolver(new PreloadedResourceResolver());
         
         main = new ShotMain();
         main.setTitle("Arena 06");

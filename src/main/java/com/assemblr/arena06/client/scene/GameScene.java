@@ -398,14 +398,17 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         player.setX(xNew);
         player.setY(yNew);
         player.setVelocity(getVelocity());
-        //if (playerId != 0 && (xOld + delta * oldVelocity.x != xNew || yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate || !oldVelocity.equals(getVelocity()))) {
-        if (playerId != 0) {
-            client.sendData(ImmutableMap.<String, Object>of(
-                    "type", "sprite",
-                    "action", "update",
-                    "id", playerId,
-                    "data", player.serializeState()
-            ));
+        if (playerId != 0 && 
+                (xOld + delta * oldVelocity.x != xNew ||
+                yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate
+                )
+                ) {
+                client.sendData(ImmutableMap.<String, Object>of(
+                        "type", "sprite",
+                        "action", "update",
+                        "id", playerId,
+                        "data", player.serializeState()
+                ));
         }
     }
 
@@ -612,7 +615,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         player.setCooldownRemaining(player.getWeapon().getFireTime());
         player.setLoadedBullets(player.getLoadedBullets() - 1);
         if (player.getLoadedBullets() <= 0) {
-            player.getWeaponData().reload();
+            player.getWeaponDataModifyable().reload();
         }
     }
 

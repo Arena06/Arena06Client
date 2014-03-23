@@ -31,7 +31,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -45,6 +44,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
@@ -67,7 +67,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     private int playerId = 0;
     private Player player;
     private Map<Integer, Sprite> sprites = new HashMap<Integer, Sprite>();
-    private Map<Integer, UpdateableSprite> updateableSprites = new HashMap<Integer, UpdateableSprite>();
+    private Map<Integer, UpdateableSprite> updateableSprites = new ConcurrentHashMap<Integer, UpdateableSprite>();
     private MapGenerator mapGenerator = new RoomGenerator();
     private TileType[][] map;
     private BufferedImage mapBuffer;
@@ -301,8 +301,17 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 playerNeedsUpdate = true;
             }
         }
+        Point mouseLocationOnScrene = new Point(0, 0);
+        try {
+            mouseLocationOnScrene = new Point(MouseInfo.getPointerInfo().getLocation().x - getLocationOnScreen().x, MouseInfo.getPointerInfo().getLocation().y - getLocationOnScreen().y);
+        } catch (Exception e) {}
+        double oldDirection = player.getDirection();
+        player.setDirection(Vector2D.getAngle(new Vector2D(mouseLocationOnScrene.x - this.getWidth() / 2, mouseLocationOnScrene.y - this.getHeight() / 2)));
+        if (player.getDirection() != oldDirection) {
+            playerNeedsUpdate = true;
+        }
         if (mouseDown && player.isAlive() && !player.isReloading() && player.cooldownRemaining() == 0 && player.getWeapon().isFullAuto() && !player.getWeaponData().isOutOfAmo()) {
-            shoot(new Point(MouseInfo.getPointerInfo().getLocation().x - getLocationOnScreen().x, MouseInfo.getPointerInfo().getLocation().y - getLocationOnScreen().y));
+            shoot(mouseLocationOnScrene);
         }
         Vector2D oldVelocity = new Vector2D(getVelocity());
         Vector2D acceleration = new Vector2D();
@@ -602,8 +611,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         List<Bullet> bullets = player.getWeapon().getBulletFactory().getBullets();
         for (Bullet b : bullets) {
             b.setOwner(player.getName());
-            Vector2D difference = new Vector2D(direction.x - this.getWidth() / 2, direction.y - this.getHeight() / 2);
-            double angle = Vector2D.getAngle(difference);
+            double angle = player.getDirection();
             b.setVelocity(b.getVelocity().addAngle(angle));
             b.setPosition((new Vector2D(angle, player.getWidth() * Math.sqrt(2) / 2, true)).add(player.getCenter()).getPoint());
             client.sendDataBlocking(ImmutableMap.<String, Object>of(
@@ -640,7 +648,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     }
 
     public void mouseWheelMoved(MouseWheelEvent e) {
-        System.out.println(e.getClickCount());
         player.incrementWeaponIndex(e.getClickCount());
     }
 

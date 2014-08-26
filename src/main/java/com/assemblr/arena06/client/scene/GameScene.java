@@ -159,6 +159,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     }
 
     private void generateMap(long seed) {
+        System.out.println("Generating map and printing.");
         map = mapGenerator.generateMap(seed);
         paintMap();
     }

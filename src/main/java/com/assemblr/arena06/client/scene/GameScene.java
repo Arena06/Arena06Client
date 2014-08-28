@@ -159,7 +159,6 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     }
 
     private void generateMap(long seed) {
-        System.out.println("Generating map and printing.");
         map = mapGenerator.generateMap(seed);
         paintMap();
     }
@@ -409,8 +408,9 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         player.setY(yNew);
         player.setVelocity(getVelocity());
         if (playerId != 0 && 
-                (xOld + delta * oldVelocity.x != xNew ||
-                yOld + delta * oldVelocity.y != yNew || playerNeedsUpdate
+                (xOld != xNew ||
+                yOld != yNew || 
+                playerNeedsUpdate
                 )
                 ) {
                 client.sendData(ImmutableMap.<String, Object>of(

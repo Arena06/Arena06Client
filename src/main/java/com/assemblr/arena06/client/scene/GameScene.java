@@ -261,10 +261,12 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                         if (s != null) {
                             s.updateState((Map<String, Object>) packet.get("data"));
                         } else {
+                            System.out.println("req sprite list because of missing sprite");
                             requestSpriteList();
                         }
                     } else {
-                        player.updateState((Map<String, Object>) packet.get("data"));
+                        Map<String, Object> playerState = (Map<String, Object>) packet.get("data");
+                        player.updateState(playerState);
                         client.sendData(ImmutableMap.<String, Object>of(
                                 "type", "sprite",
                                 "action", "validate",
@@ -423,6 +425,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     private boolean requestingSpriteList = false;
 
     private synchronized void requestSpriteList() {
+        System.out.println("requesting a sprite list.");
         if (requestingSpriteList) {
             return;
         }

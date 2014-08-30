@@ -94,11 +94,9 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
 
     @Override
     public void sceneWillAppear() {
-        try {
-            ResourceResolver.getResourceResolver().loadResources(ResourceBlock.SPRITES);
-        } catch (IOException ex) {
-            Logger.getLogger(GameScene.class.getName()).log(Level.SEVERE, null, ex);
-        }
+
+        ResourceResolver.getResourceResolver().loadResources(ResourceBlock.SPRITES);
+
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
         new Thread(new Runnable() {
             public void run() {

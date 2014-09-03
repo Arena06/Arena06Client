@@ -93,8 +93,8 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
     }
 
     @Override
-    public void sceneWillAppear() {
-
+    public void sceneWillAppear() {        
+        
         ResourceResolver.getResourceResolver().loadResources(ResourceBlock.SPRITES);
 
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
@@ -194,6 +194,8 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 generateMap((Long) packet.get("map-seed"));
                 requestSpriteList();
                 System.out.println("logged in as " + player.getName());
+            } else if (playerId == 0) {
+                //Only login packets are proccessed when the PID is 0.
             } else if (packet.get("type").equals("request")) {
                 if (packet.get("request").equals("sprite-list")) {
                     // refresh sprite list
@@ -444,7 +446,9 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         g.fillRect(0, 0, getWidth(), getHeight());
 
         // translate camera
-        g.translate((getWidth() - player.getWidth()) / 2.0 - player.getX(), (getHeight() - player.getHeight()) / 2.0 - player.getY());
+        double playerx = player.getX(), playery = player.getY(); //Lock in player's x and y so they can't be cahnged while the update is happening.
+        double translatex = (getWidth() - player.getWidth()) / 2.0 - playerx, translatey = (getHeight() - player.getHeight()) / 2.0 - playery;
+        g.translate(translatex, translatey);
 
         // draw map
         g.drawImage(mapBuffer, 0, 0, null);
@@ -456,12 +460,12 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
         }
 
         // render player separately
-        g.translate(player.getX(), player.getY());
+        g.translate(playerx, playery);
         player.render(g);
-        g.translate(-player.getX(), -player.getY());
+        g.translate(-playerx, -playery);
 
         // untranslate camera
-        g.translate(-((getWidth() - player.getWidth()) / 2.0 - player.getX()), -((getHeight() - player.getHeight()) / 2.0 - player.getY()));
+        g.translate(-translatex, -translatey);
 
         // draw weapon info
         if (player.isAlive()) {
@@ -534,7 +538,7 @@ public class GameScene extends Scene implements KeyEventDispatcher, KeyListener,
                 }
             }
         }
-
+        
     }
 
     public boolean dispatchKeyEvent(KeyEvent ke) {
